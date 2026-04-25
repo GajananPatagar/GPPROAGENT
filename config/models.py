@@ -81,7 +81,7 @@ MODELS = {
     "ocr": {
         "name": "TrOCR — Vision OCR Brain",
         "file": "trocr-vision.onnx",
-        "url":  "https://huggingface.co/microsoft/trocr-small-printed/resolve/main/model.onnx",
+        "url":  "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf",
         "size_gb": 0.1, "ram_mb": 64, "speed_s": 0.2, "accuracy": 96,
         "role": "Read text from screen, OCR, image text extraction",
         "triggers": ["read screen","what does screen say","ocr",
