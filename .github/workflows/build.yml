@@ -1,9 +1,7 @@
 name: GP PRO AGENT Build
-
 on:
   push:
     branches: [ main ]
-
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -17,10 +15,8 @@ jobs:
     - name: Build
       run: |
         pip install pyinstaller psutil
-        pyinstaller --onedir --console --name GP_PRO_AGENT --add-data "installer;installer" --add-data "core;core" --add-data "gui;gui" --add-data "config;config" --hidden-import tkinter --hidden-import tkinter.ttk main.py
-        copy install.bat dist\GP_PRO_AGENT\
+        pyinstaller --onedir --windowed --name GP_PRO_AGENT --add-data "gui;gui" --add-data "config;config" --hidden-import tkinter --hidden-import tkinter.ttk --hidden-import tkinter.scrolledtext --hidden-import tkinter.messagebox main.py
         copy README.md dist\GP_PRO_AGENT\
-        xcopy installer dist\GP_PRO_AGENT\installer\ /E /I /Q
         Compress-Archive -Path dist\GP_PRO_AGENT -DestinationPath GP_PRO_AGENT-Windows.zip
     - uses: actions/upload-artifact@v4
       with:
@@ -40,12 +36,8 @@ jobs:
       run: |
         sudo apt-get install -y python3-tk
         pip install pyinstaller psutil
-        pyinstaller --onedir --console --name GP_PRO_AGENT --add-data "installer:installer" --add-data "core:core" --add-data "gui:gui" --add-data "config:config" --hidden-import tkinter main.py
-        cp install.sh dist/GP_PRO_AGENT/
+        pyinstaller --onedir --windowed --name GP_PRO_AGENT --add-data "gui:gui" --add-data "config:config" --hidden-import tkinter --hidden-import tkinter.ttk main.py
         cp README.md dist/GP_PRO_AGENT/
-        mkdir -p dist/GP_PRO_AGENT/installer
-        cp installer/brain_installer.py dist/GP_PRO_AGENT/installer/
-        chmod +x dist/GP_PRO_AGENT/install.sh
         tar -czf GP_PRO_AGENT-Linux.tar.gz -C dist GP_PRO_AGENT
     - uses: actions/upload-artifact@v4
       with:
@@ -69,6 +61,6 @@ jobs:
       run: |
         gh release delete latest --yes 2>/dev/null || true
         git push --delete origin latest 2>/dev/null || true
-        gh release create latest --title "GP PRO AGENT Latest" --notes "11 AI Brains | 40GB | 600MB RAM | One-click install" GP_PRO_AGENT-Windows.zip GP_PRO_AGENT-Linux.tar.gz
+        gh release create latest --title "GP PRO AGENT v1.0.0" --notes "Professional AI — 11 Brains — 40GB — Double click to install" GP_PRO_AGENT-Windows.zip GP_PRO_AGENT-Linux.tar.gz
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
