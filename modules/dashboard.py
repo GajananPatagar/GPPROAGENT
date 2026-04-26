@@ -42,7 +42,7 @@ class LiveDashboard:
     def _build(self):
         # Title
         tk.Label(self._win,
-                 text="◈ GP PRO AGENT — LIVE DASHBOARD",
+                 text=">> GP PRO AGENT — LIVE DASHBOARD",
                  bg=self.C["bg"], fg=self.C["cyan"],
                  font=self.F["title"]).pack(anchor="w", padx=16, pady=(12,4))
 
@@ -82,7 +82,7 @@ class LiveDashboard:
                         highlightbackground=self.C["border"],
                         highlightthickness=1)
         ram_f.grid(row=0, column=0, sticky="nsew", padx=(0,4))
-        tk.Label(ram_f, text="◈ RAM USAGE (60s)",
+        tk.Label(ram_f, text=">> RAM USAGE (60s)",
                 bg=self.C["panel"], fg=self.C["cyan"],
                 font=self.F["head"]).pack(anchor="w", padx=8, pady=4)
         self._ram_canvas = tk.Canvas(
@@ -96,7 +96,7 @@ class LiveDashboard:
                           highlightbackground=self.C["border"],
                           highlightthickness=1)
         brain_f.grid(row=0, column=1, sticky="nsew", padx=(4,0))
-        tk.Label(brain_f, text="◈ BRAIN USAGE",
+        tk.Label(brain_f, text=">> BRAIN USAGE",
                 bg=self.C["panel"], fg=self.C["cyan"],
                 font=self.F["head"]).pack(anchor="w", padx=8, pady=4)
         self._brain_frame = tk.Frame(brain_f, bg=self.C["panel"])
@@ -108,7 +108,7 @@ class LiveDashboard:
                         highlightbackground=self.C["border"],
                         highlightthickness=1)
         bot_f.pack(fill="x", padx=16, pady=(4,8))
-        tk.Label(bot_f, text="◈ RESPONSE TIMES (last 20 queries)",
+        tk.Label(bot_f, text=">> RESPONSE TIMES (last 20 queries)",
                 bg=self.C["panel"], fg=self.C["cyan"],
                 font=self.F["head"]).pack(anchor="w", padx=8, pady=4)
         self._time_canvas = tk.Canvas(

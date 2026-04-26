@@ -154,7 +154,7 @@ class AlertSystem:
 
                 tk.Frame(popup, bg=color, height=3).pack(fill="x")
                 tk.Label(popup,
-                        text=f"⚠ {alert.severity}: {alert.rule_name}",
+                        text=f"!! {alert.severity}: {alert.rule_name}",
                         bg=self.C["panel"], fg=color,
                         font=self.F["head"]).pack(padx=12, pady=(8,4))
                 tk.Label(popup, text=alert.message,
@@ -212,7 +212,7 @@ class AlertSystem:
         self._build_window()
 
     def _build_window(self):
-        tk.Label(self._win, text="◈ SMART ALERT SYSTEM",
+        tk.Label(self._win, text=">> SMART ALERT SYSTEM",
                 bg=self.C["bg"], fg=self.C["cyan"],
                 font=self.F["head"]).pack(anchor="w",
                                           padx=16, pady=(12,4))
@@ -231,7 +231,7 @@ class AlertSystem:
         # Left — Watch Rules
         lf = tk.Frame(paned, bg=self.C["panel"])
         paned.add(lf, width=350)
-        tk.Label(lf, text="◈ WATCH RULES",
+        tk.Label(lf, text=">> WATCH RULES",
                 bg=self.C["panel"], fg=self.C["cyan"],
                 font=self.F["head"]).pack(anchor="w", padx=8, pady=6)
         self._rules_frame = tk.Frame(lf, bg=self.C["panel"])
@@ -255,7 +255,7 @@ class AlertSystem:
         # Right — Recent Alerts
         rf = tk.Frame(paned, bg=self.C["panel"])
         paned.add(rf)
-        tk.Label(rf, text="◈ RECENT ALERTS",
+        tk.Label(rf, text=">> RECENT ALERTS",
                 bg=self.C["panel"], fg=self.C["cyan"],
                 font=self.F["head"]).pack(anchor="w", padx=8, pady=6)
         self._alerts_text = tk.Text(

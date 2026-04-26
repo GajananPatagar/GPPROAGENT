@@ -36,7 +36,7 @@ class VoiceEngine:
             return
         def _do():
             try:
-                clean = text.replace("◈","").replace("•","").replace("```","")
+                clean = text.replace(">>","").replace("-","").replace("```","")
                 # Limit to 300 chars for speed
                 if len(clean) > 300:
                     clean = clean[:300] + "..."

@@ -184,7 +184,7 @@ class TagMonitor:
                       highlightbackground=self.C["border"],
                       highlightthickness=1)
         hdr.pack(fill="x", padx=8, pady=(8,4))
-        tk.Label(hdr, text="◈ LIVE PLC TAG MONITOR",
+        tk.Label(hdr, text=">> LIVE PLC TAG MONITOR",
                 bg=self.C["panel"], fg=self.C["cyan"],
                 font=self.F["head"]).pack(side="left", padx=12, pady=8)
         self._sim_lbl = tk.Label(hdr,
@@ -285,15 +285,15 @@ class TagMonitor:
                    if tag.last_update else "--")
             self._tree.insert("", "end",
                 values=(tag.name, val_str, tag.unit,
-                       "⚠ ALARM" if tag.in_alarm else "OK",
+                       "!! ALARM" if tag.in_alarm else "OK",
                        tag.address, upd),
                 tags=(tag_type,))
         if alarms:
             self._alarm_lbl.config(
-                text=f"⚠ {alarms} ALARM(S) ACTIVE",
+                text=f"!! {alarms} ALARM(S) ACTIVE",
                 fg=self.C["error"])
         else:
-            self._alarm_lbl.config(text="✓ No alarms",
+            self._alarm_lbl.config(text="OK No alarms",
                                    fg=self.C["green"])
         self._win.after(1000, self._refresh_table)
 

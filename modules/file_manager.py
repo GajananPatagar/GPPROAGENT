@@ -169,7 +169,7 @@ class SmartFileManager:
         output_path = Path.home() / "Desktop" / filename
         output_path.write_text(content or f"# Created by GP PRO AGENT\n# {datetime.now()}\n",
                                encoding="utf-8")
-        return (f"✓ File created: {filename}\n"
+        return (f"OK File created: {filename}\n"
                f"Location: {output_path}\n"
                f"Content: {len(content)} characters")
 
@@ -206,10 +206,10 @@ class SmartFileManager:
                     try:
                         shutil.move(str(file), str(dest_dir/file.name))
                         moved += 1
-                        report += f"  {file.name} → {cat}/\n"
+                        report += f"  {file.name} -> {cat}/\n"
                     except: pass
                     break
-        report += f"\n✓ Organized {moved} files"
+        report += f"\nOK Organized {moved} files"
         return report
 
     def _list_files(self, query: str) -> str:
@@ -262,12 +262,12 @@ class SmartFileManager:
     def _analyze_path(self, query: str) -> str:
         return ("Smart File Manager ready.\n\n"
                "Commands:\n"
-               "• 'Find file report.xlsx'      — Search files\n"
-               "• 'Read C:\\notes.txt'          — Read file content\n"
-               "• 'List files on Desktop'      — Show directory\n"
-               "• 'Organize my Downloads'      — Sort by type\n"
-               "• 'How much disk space?'       — Disk info\n"
-               "• 'Create file named log.txt'  — Create new file")
+               "- 'Find file report.xlsx'      — Search files\n"
+               "- 'Read C:\\notes.txt'          — Read file content\n"
+               "- 'List files on Desktop'      — Show directory\n"
+               "- 'Organize my Downloads'      — Sort by type\n"
+               "- 'How much disk space?'       — Disk info\n"
+               "- 'Create file named log.txt'  — Create new file")
 
     def _fmt_size(self, size: int) -> str:
         for unit in ["B","KB","MB","GB"]:

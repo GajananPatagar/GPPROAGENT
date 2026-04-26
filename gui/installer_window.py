@@ -34,10 +34,10 @@ class InstallerWindow:
         left=tk.Frame(self.root,bg=DARK,width=280)
         left.pack(side="left",fill="y")
         left.pack_propagate(False)
-        tk.Label(left,text="⬡",bg=DARK,fg=CYAN,font=("Consolas",48)).pack(pady=(50,10))
+        tk.Label(left,text="[GP]",bg=DARK,fg=CYAN,font=("Consolas",48)).pack(pady=(50,10))
         tk.Label(left,text="GP PRO\nAGENT",bg=DARK,fg=WHITE,font=("Consolas",22,"bold"),justify="center").pack()
         tk.Label(left,text="v1.0.0",bg=DARK,fg=DIM,font=("Consolas",10)).pack(pady=(4,20))
-        for f in ["✓ 11 AI Brain Models","✓ ~40GB Knowledge","✓ PLC Engineering","✓ GUI Automation","✓ Software Learning","✓ 600MB RAM Max","✓ 100% Offline","✓ Self-Modifying UI"]:
+        for f in ["OK 11 AI Brain Models","OK ~40GB Knowledge","OK PLC Engineering","OK GUI Automation","OK Software Learning","OK 600MB RAM Max","OK 100% Offline","OK Self-Modifying UI"]:
             tk.Label(left,text=f,bg=DARK,fg=GREEN,font=("Consolas",9),anchor="w").pack(fill="x",padx=24,pady=1)
         tk.Label(left,text="IHTM Department",bg=DARK,fg=DIM,font=("Consolas",8)).pack(side="bottom",pady=20)
 
@@ -74,7 +74,7 @@ class InstallerWindow:
         for key,model in MODELS.items():
             row=tk.Frame(lf,bg=PANEL,pady=1)
             row.pack(fill="x",padx=6)
-            dot=tk.Label(row,text="○",bg=PANEL,fg=DIM,font=("Consolas",9))
+            dot=tk.Label(row,text="o",bg=PANEL,fg=DIM,font=("Consolas",9))
             dot.pack(side="left")
             tk.Label(row,text=f"[{key:8s}]",bg=PANEL,fg=ORANGE,font=("Consolas",8),width=9,anchor="w").pack(side="left")
             tk.Label(row,text=f"{model['name'][:26]}",bg=PANEL,fg=WHITE,font=("Consolas",8),anchor="w").pack(side="left")
@@ -83,7 +83,7 @@ class InstallerWindow:
 
         self.status_lbl=tk.Label(right,text="Starting...",bg=BG,fg=DIM,font=("Consolas",8),anchor="w")
         self.status_lbl.pack(fill="x",padx=30,pady=(8,0))
-        self.launch_btn=tk.Button(right,text="▶  LAUNCH GP PRO AGENT",bg=CYAN,fg=BG,font=("Consolas",12,"bold"),relief="flat",cursor="hand2",command=self._launch)
+        self.launch_btn=tk.Button(right,text=">  LAUNCH GP PRO AGENT",bg=CYAN,fg=BG,font=("Consolas",12,"bold"),relief="flat",cursor="hand2",command=self._launch)
         threading.Thread(target=self._install,daemon=True).start()
 
     def _install(self):
@@ -95,20 +95,20 @@ class InstallerWindow:
             total=len(MODELS)
             for i,(key,model) in enumerate(MODELS.items()):
                 self._overall(int(i/total*100),i,total)
-                self._dot(key,WARNING,"⟳")
+                self._dot(key,WARNING,"~")
                 self._lbl(f"Downloading: {model['name']}")
                 dest=self.settings.model_path/model["file"]
                 if dest.exists() and dest.stat().st_size/(1024**3)>model["size_gb"]*0.8:
-                    self._dot(key,GREEN,"✓")
+                    self._dot(key,GREEN,"OK")
                     self._bar(100)
                     continue
                 if self._download(model["url"],dest):
-                    self._dot(key,GREEN,"✓")
+                    self._dot(key,GREEN,"OK")
                 else:
-                    self._dot(key,ERROR,"✗")
+                    self._dot(key,ERROR,"X")
             self._build_router()
             self._overall(100,total,total)
-            self._lbl("✓ Installation Complete!")
+            self._lbl("OK Installation Complete!")
             self._bar(100)
             self._done=True
             self.root.after(0,self._show_launch)
@@ -184,7 +184,7 @@ class InstallerWindow:
 
     def _show_launch(self):
         self.launch_btn.pack(fill="x",padx=30,pady=12,ipady=8)
-        self.status_lbl.config(text="✓ Done! Click to launch.",fg=GREEN)
+        self.status_lbl.config(text="OK Done! Click to launch.",fg=GREEN)
 
     def _launch(self):
         self.root.destroy()

@@ -125,9 +125,9 @@ class MainWindow:
         self._build_chat()
         self._build_sidebar()
         self._build_input()
-        self._msg("system","◈ GP PRO AGENT v2.0 — All 6 Modules Online\n")
-        self._msg("system","◈ Voice | Vision | Memory | PLC Control | Dashboard | Scheduler\n")
-        self._msg("system","◈ Say anything — I use the right brain automatically\n\n")
+        self._msg("system",">> GP PRO AGENT v2.0 — All 6 Modules Online\n")
+        self._msg("system",">> Voice | Vision | Memory | PLC Control | Dashboard | Scheduler\n")
+        self._msg("system",">> Say anything — I use the right brain automatically\n\n")
         threading.Thread(target=self._startup,daemon=True).start()
 
     def _build_header(self):
@@ -135,7 +135,7 @@ class MainWindow:
                    highlightbackground=self.C["border"],highlightthickness=1)
         h.grid(row=0,column=0,columnspan=2,sticky="ew",pady=(0,4))
         h.grid_columnconfigure(2,weight=1)
-        tk.Label(h,text="⬡ GP PRO AGENT",bg=self.C["panel"],
+        tk.Label(h,text="[GP] GP PRO AGENT",bg=self.C["panel"],
                  fg=self.C["cyan"],font=self.F["title"]).grid(
                  row=0,column=0,padx=16,pady=8)
         tk.Label(h,text="Real AI | PLC | GUI | Vision | Voice | Memory | Auto-Schedule",
@@ -148,7 +148,7 @@ class MainWindow:
         self.priority=tk.StringVar(value="balanced")
         pf=tk.Frame(h,bg=self.C["panel"])
         pf.grid(row=0,column=4,padx=6)
-        for v,l in [("speed","⚡"),("balanced","⚖"),("accuracy","🎯")]:
+        for v,l in [("speed","[FAST]"),("balanced","[BAL]"),("accuracy","[ACC]")]:
             tk.Radiobutton(pf,text=l,variable=self.priority,value=v,
                           bg=self.C["panel"],fg=self.C["white"],
                           selectcolor=self.C["button"],
@@ -156,24 +156,24 @@ class MainWindow:
                           font=self.F["small"]).pack(side="left",padx=1)
         # All 6 module buttons
         btns=[
-            ("🎤 Voice",   self._toggle_voice,   self.C["button"]),
-            ("👁 Vision",  self._vision_action,   self.C["button"]),
-            ("📊 Dash",    self.dashboard.toggle, self.C["button"]),
-            ("🤖 PLC",     self._plc_panel,       self.C["button"]),
-            ("⏰ Schedule",self._scheduler_panel, self.C["button"]),
-            ("⊟ Mini",     self._enter_mini_mode, self.C["button"]),
-            ("🌐 Web",      self._show_web_info,   self.C["button"]),
-            ("📝 CodeGen",  self._codegen_panel,   self.C["button"]),
-            ("📡 Tags",     self._open_tag_monitor,self.C["button"]),
-            ("📁 Files",    self._files_panel,     self.C["button"]),
-            ("🔔 Alerts",   self._open_alerts,     self.C["button"]),
-            ("⬇ Models",   self._open_dl_manager, self.C["button"]),
+            ("[MIC] Voice",   self._toggle_voice,   self.C["button"]),
+            ("[EYE] Vision",  self._vision_action,   self.C["button"]),
+            ("[DASH] Dash",    self.dashboard.toggle, self.C["button"]),
+            ("[PLC] PLC",     self._plc_panel,       self.C["button"]),
+            ("[TIME] Schedule",self._scheduler_panel, self.C["button"]),
+            ("[-] Mini",     self._enter_mini_mode, self.C["button"]),
+            ("[WEB] Web",      self._show_web_info,   self.C["button"]),
+            ("[CODE] CodeGen",  self._codegen_panel,   self.C["button"]),
+            ("[TAG] Tags",     self._open_tag_monitor,self.C["button"]),
+            ("[FILE] Files",    self._files_panel,     self.C["button"]),
+            ("[ALERT] Alerts",   self._open_alerts,     self.C["button"]),
+            ("[v] Models",   self._open_dl_manager, self.C["button"]),
         ]
         for i,(txt,cmd,bg) in enumerate(btns):
             tk.Button(h,text=txt,bg=bg,fg=self.C["white"],
                      font=("Consolas",8),relief="flat",cursor="hand2",
                      command=cmd).grid(row=0,column=5+i,padx=2)
-        self.voice_lbl=tk.Label(h,text="🎤 OFF",bg=self.C["panel"],
+        self.voice_lbl=tk.Label(h,text="[MIC] OFF",bg=self.C["panel"],
                                  fg=self.C["dim"],font=self.F["small"])
         self.voice_lbl.grid(row=0,column=12,padx=4)
 
@@ -183,7 +183,7 @@ class MainWindow:
         f.grid(row=1,column=0,sticky="nsew",padx=(0,4),pady=4)
         f.grid_rowconfigure(1,weight=1)
         f.grid_columnconfigure(0,weight=1)
-        tk.Label(f,text="◈ CONVERSATION",bg=self.C["panel"],
+        tk.Label(f,text=">> CONVERSATION",bg=self.C["panel"],
                  fg=self.C["cyan"],font=self.F["head"]).grid(
                  row=0,column=0,sticky="w",padx=12,pady=6)
         self.chat=scrolledtext.ScrolledText(
@@ -209,7 +209,7 @@ class MainWindow:
                    highlightbackground=self.C["border"],highlightthickness=1)
         f.grid(row=1,column=1,sticky="nsew",padx=(4,0),pady=4)
         f.grid_columnconfigure(0,weight=1)
-        tk.Label(f,text="◈ BRAIN STATUS",bg=self.C["panel"],
+        tk.Label(f,text=">> BRAIN STATUS",bg=self.C["panel"],
                  fg=self.C["cyan"],font=self.F["head"]).grid(
                  row=0,column=0,sticky="w",padx=12,pady=6)
         canvas=tk.Canvas(f,bg=self.C["panel"],
@@ -245,7 +245,7 @@ class MainWindow:
             tk.Frame(f,bg=self.C["border"],height=1).grid(
                 row=r,column=0,columnspan=2,sticky="ew",padx=8,pady=3)
         sep(2)
-        tk.Label(f,text="◈ ACTIVE BRAIN",bg=self.C["panel"],
+        tk.Label(f,text=">> ACTIVE BRAIN",bg=self.C["panel"],
                  fg=self.C["cyan"],font=self.F["head"]).grid(
                  row=3,column=0,sticky="w",padx=12,pady=(4,2))
         self.active_lbl=tk.Label(f,text="Waiting...",bg=self.C["panel"],
@@ -253,7 +253,7 @@ class MainWindow:
                                   justify="left",wraplength=195)
         self.active_lbl.grid(row=4,column=0,sticky="w",padx=12,pady=2)
         sep(5)
-        tk.Label(f,text="◈ MEMORY",bg=self.C["panel"],
+        tk.Label(f,text=">> MEMORY",bg=self.C["panel"],
                  fg=self.C["cyan"],font=self.F["head"]).grid(
                  row=6,column=0,sticky="w",padx=12,pady=(4,2))
         self.mem_lbl=tk.Label(f,text="Entries: 0",bg=self.C["panel"],
@@ -261,7 +261,7 @@ class MainWindow:
                                justify="left")
         self.mem_lbl.grid(row=7,column=0,sticky="w",padx=12,pady=2)
         sep(8)
-        tk.Label(f,text="◈ SESSION",bg=self.C["panel"],
+        tk.Label(f,text=">> SESSION",bg=self.C["panel"],
                  fg=self.C["cyan"],font=self.F["head"]).grid(
                  row=9,column=0,sticky="w",padx=12,pady=(4,2))
         self.stats_lbl=tk.Label(
@@ -270,7 +270,7 @@ class MainWindow:
             font=self.F["small"],justify="left")
         self.stats_lbl.grid(row=10,column=0,sticky="w",padx=12,pady=2)
         sep(11)
-        tk.Label(f,text="◈ QUICK",bg=self.C["panel"],
+        tk.Label(f,text=">> QUICK",bg=self.C["panel"],
                  fg=self.C["cyan"],font=self.F["head"]).grid(
                  row=12,column=0,sticky="w",padx=12,pady=(4,2))
         for i,(lbl,cmd) in enumerate([
@@ -293,7 +293,7 @@ class MainWindow:
         f.grid(row=2,column=0,columnspan=2,sticky="ew",pady=(4,0))
         f.grid_columnconfigure(0,weight=1)
         self.hint_lbl=tk.Label(
-            f,text="Ask anything — right brain selected automatically | 🎤 Voice | 👁 Vision | 🤖 PLC | ⏰ Auto",
+            f,text="Ask anything — right brain selected automatically | [MIC] Voice | [EYE] Vision | [PLC] PLC | [TIME] Auto",
             bg=self.C["panel"],fg=self.C["dim"],
             font=self.F["small"],anchor="w")
         self.hint_lbl.grid(row=0,column=0,columnspan=2,
@@ -312,20 +312,20 @@ class MainWindow:
         self.inp.bind("<Return>",self._on_enter)
         bf=tk.Frame(inf,bg=self.C["panel"])
         bf.grid(row=0,column=1)
-        self.send_btn=tk.Button(bf,text="▶ SEND",
+        self.send_btn=tk.Button(bf,text="> SEND",
                                  bg=self.C["cyan"],fg=self.C["bg"],
                                  font=self.F["head"],width=10,
                                  relief="flat",cursor="hand2",
                                  command=self._send)
         self.send_btn.pack(pady=(0,3))
-        self.cancel_btn=tk.Button(bf,text="✕ CANCEL",
+        self.cancel_btn=tk.Button(bf,text="X CANCEL",
                                    bg=self.C["error"],fg=self.C["white"],
                                    font=self.F["small"],width=10,
                                    relief="flat",cursor="hand2",
                                    command=self._cancel_request,
                                    state="disabled")
         self.cancel_btn.pack(pady=(0,3))
-        tk.Button(bf,text="⊘ CLEAR",bg=self.C["button"],fg=self.C["white"],
+        tk.Button(bf,text="[X] CLEAR",bg=self.C["button"],fg=self.C["white"],
                   font=self.F["small"],width=10,relief="flat",cursor="hand2",
                   command=self._clear).pack()
         self.status_bar=tk.Label(f,text="Ready — GP PRO AGENT v2.0 Online",
@@ -353,7 +353,7 @@ class MainWindow:
     def _start_processing(self, query):
         self._busy=True
         self._cancel.clear()
-        self.send_btn.config(state="disabled",text="⏳...")
+        self.send_btn.config(state="disabled",text="......")
         self.cancel_btn.config(state="normal")
         self.status_bar.config(text="Processing...",
                                fg=self.C["warning"])
@@ -369,7 +369,7 @@ class MainWindow:
                 self._llm_key=None
                 gc.collect()
             except: pass
-        self._msg("system","[✕ Cancelled]\n\n")
+        self._msg("system","[X Cancelled]\n\n")
         self._done_busy("Cancelled.")
 
     def _process(self, query):
@@ -465,7 +465,7 @@ class MainWindow:
             scores[key]=score
         ranked=sorted(scores.items(),key=lambda x:x[1],reverse=True)
         best=ranked[0][0]
-        print(f"[ROUTE] '{q[:25]}' → {best} | scores: "
+        print(f"[ROUTE] '{q[:25]}' -> {best} | scores: "
               f"{[(k,round(v,1)) for k,v in ranked[:3]]}")
         return best
 
@@ -508,7 +508,7 @@ class MainWindow:
         for i,step in enumerate(steps):
             if self._cancel.is_set(): break
             brain=self._route(step.lower())
-            self._msg("action",f"Step {i+1}: {step}\n→ [{brain.upper()}]\n")
+            self._msg("action",f"Step {i+1}: {step}\n-> [{brain.upper()}]\n")
             self.root.after(0,self._dot,brain,self.C["warning"])
             answer=self._ask(brain,step)
             self.root.after(0,self._dot,brain,self.C["green"])
@@ -594,17 +594,17 @@ class MainWindow:
         if any(w in ql for w in ["hello","hi","hey"]):
             return ("Hello! I am GP PRO AGENT v2.0\n\n"
                     "I have 11 specialist AI brains:\n"
-                    "• PLC & Industrial Automation\n"
-                    "• GUI & Screen Automation\n"
-                    "• Real Screen Vision (OCR)\n"
-                    "• Voice Control\n"
-                    "• Software Learning & Operation\n"
-                    "• Engineering Math\n"
-                    "• Safety Systems\n"
-                    "• Python Code Writing\n"
-                    "• Memory (remembers everything)\n"
-                    "• Auto Task Scheduler\n"
-                    "• Live Dashboard\n\nAsk me anything!")
+                    "- PLC & Industrial Automation\n"
+                    "- GUI & Screen Automation\n"
+                    "- Real Screen Vision (OCR)\n"
+                    "- Voice Control\n"
+                    "- Software Learning & Operation\n"
+                    "- Engineering Math\n"
+                    "- Safety Systems\n"
+                    "- Python Code Writing\n"
+                    "- Memory (remembers everything)\n"
+                    "- Auto Task Scheduler\n"
+                    "- Live Dashboard\n\nAsk me anything!")
         if "who are you" in ql or "what are you" in ql:
             return ("I am GP PRO AGENT — Professional AI System\n\n"
                     "Built with 11 specialist AI brains.\n"
@@ -614,7 +614,7 @@ class MainWindow:
                     "Created by IHTM Department.")
         return (f"I understood: '{q}'\n\n"
                 "For full AI responses, download the brain models.\n"
-                "Click '⬇ Models' button. Currently using expert knowledge.\n"
+                "Click '[v] Models' button. Currently using expert knowledge.\n"
                 "Ask me about PLC, safety, code, math, GUI automation!")
 
     def _plc_domain(self,q):
@@ -637,13 +637,13 @@ class MainWindow:
                     "MATH: ADD SUB MUL DIV MOD SQR ABS NEG\n"
                     "COMPARE: EQU NEQ GRT LES GEQ LEQ\n"
                     "DATA: MOV COP FLL CLR\n\n"
-                    "BRANDS: Allen Bradley→Studio 5000 | Siemens→TIA Portal\n"
+                    "BRANDS: Allen Bradley->Studio 5000 | Siemens->TIA Portal\n"
                     "NETWORKS: Modbus TCP | Profibus | EtherNet/IP | OPC-UA")
         if "modbus" in q:
             return ("MODBUS PROTOCOL GUIDE:\n\n"
                     "RTU vs TCP:\n"
-                    "• RTU — RS-485 serial, CRC check, compact\n"
-                    "• TCP — Ethernet port 502, easier setup\n\n"
+                    "- RTU — RS-485 serial, CRC check, compact\n"
+                    "- TCP — Ethernet port 502, easier setup\n\n"
                     "Function Codes:\n"
                     "FC01 — Read Coils\nFC02 — Read Discrete Inputs\n"
                     "FC03 — Read Holding Registers\nFC04 — Read Input Registers\n"
@@ -690,9 +690,9 @@ class MainWindow:
                     "1 — Controlled stop then power removal\n"
                     "2 — Controlled stop, power maintained\n\n"
                     "Safety Relay monitors:\n"
-                    "• Feedback contacts (detects welded)\n"
-                    "• Cross-monitoring (dual channel)\n"
-                    "• Response time < 20ms typically")
+                    "- Feedback contacts (detects welded)\n"
+                    "- Cross-monitoring (dual channel)\n"
+                    "- Response time < 20ms typically")
         if "sil" in q:
             return ("SAFETY INTEGRITY LEVELS (IEC 61508):\n\n"
                     "SIL 1 | PFD 0.01-0.1    | RRF 10-100\n"
@@ -717,8 +717,8 @@ class MainWindow:
                     "7. RELEASE — Bleed pressure, discharge capacitors, block gravity\n"
                     "8. VERIFY — Test/measure to confirm ZERO energy state\n\n"
                     "Removal (reverse order):\n"
-                    "Remove tools → Restore guards → Clear personnel\n"
-                    "Remove locks/tags → Restore energy → Notify completion")
+                    "Remove tools -> Restore guards -> Clear personnel\n"
+                    "Remove locks/tags -> Restore energy -> Notify completion")
         return (f"Safety Brain: '{q}'\n\n"
                 "I cover:\nE-stop design | SIL levels | LOTO procedure\n"
                 "Risk assessment | IEC 61508/61511 | ISO 13849\n"
@@ -760,7 +760,7 @@ class MainWindow:
                 "pyautogui.typewrite('text')     — Type text\n"
                 "pyautogui.hotkey('ctrl','c')    — Key combo\n"
                 "pyautogui.screenshot()          — Capture screen\n\n"
-                "Find coordinates:\nMove mouse to target → Windows shows X,Y in taskbar\n\n"
+                "Find coordinates:\nMove mouse to target -> Windows shows X,Y in taskbar\n\n"
                 "For software automation:\n"
                 "import subprocess\nsubprocess.Popen('notepad.exe')\n"
                 "time.sleep(1)  # Wait for open\n"
@@ -769,10 +769,10 @@ class MainWindow:
     def _docs_domain(self,q):
         return (f"Documentation Brain ready for: '{q}'\n\n"
                 "I can write:\n"
-                "• Technical reports and manuals\n"
-                "• PLC program documentation\n"
-                "• Safety procedures (SOP, LOTO)\n"
-                "• Email drafts\n• Project summaries\n\n"
+                "- Technical reports and manuals\n"
+                "- PLC program documentation\n"
+                "- Safety procedures (SOP, LOTO)\n"
+                "- Email drafts\n- Project summaries\n\n"
                 "For full AI document generation, download Qwen2-7B (4.5GB).\n"
                 "Tell me what document you need and I will write it.")
 
@@ -787,10 +787,10 @@ class MainWindow:
             return self._handle_open(query,return_str=True)
         return (f"Software Learning Brain: '{query}'\n\n"
                 "I can help you:\n"
-                "• Open any software\n"
-                "• Navigate menus step by step\n"
-                "• Learn keyboard shortcuts\n"
-                "• Automate repetitive tasks\n\n"
+                "- Open any software\n"
+                "- Navigate menus step by step\n"
+                "- Learn keyboard shortcuts\n"
+                "- Automate repetitive tasks\n\n"
                 "Tell me which software you want to learn or open!")
 
     def _math_domain(self,query):
@@ -799,10 +799,10 @@ class MainWindow:
     def _ocr_domain(self,q):
         return ("OCR Vision Brain ready.\n\n"
                 "I can:\n"
-                "• Take screenshot and read all text\n"
-                "• Find specific text on screen\n"
-                "• Describe what's visible\n"
-                "• Click on text found on screen\n\n"
+                "- Take screenshot and read all text\n"
+                "- Find specific text on screen\n"
+                "- Describe what's visible\n"
+                "- Click on text found on screen\n\n"
                 "Say: 'Take a screenshot' or 'What is on screen?'")
 
     # ══════════════════════════════════════════════════════════
@@ -827,19 +827,19 @@ class MainWindow:
                 m=re.search(pat,q)
                 if m:
                     app=m.group(1).strip().rstrip(".")
-                    try:
-                        subprocess.Popen(app, shell=True)
-                        opened=app; app_name=app.title()
-                        break
-                    except:
+                    # Try direct, then shell search
+                    for cmd in [app, f'start "" "{app}"', 
+                                f'"{app}.exe"',
+                                f'start "" "{app}.exe"']: 
                         try:
-                            subprocess.Popen(f'start "" "{app}"',shell=True)
+                            subprocess.Popen(cmd, shell=True)
                             opened=app; app_name=app.title()
                             break
                         except: pass
+                    if opened: break
         if opened:
             self.root.after(800, self._enter_mini_mode)
-            msg=(f"✓ Opening {app_name}...\n"
+            msg=(f"OK Opening {app_name}...\n"
                  "Switching to Mini Mode — I am in the corner.\n"
                  "Type commands in the small bar while using software.")
         else:
@@ -898,7 +898,7 @@ class MainWindow:
         windows=self.vision.detect_open_windows()
         resp=text
         if windows:
-            resp+=f"\n\nOpen windows:\n"+"\n".join(f"• {w}" for w in windows)
+            resp+=f"\n\nOpen windows:\n"+"\n".join(f"- {w}" for w in windows)
         self._msg("agent",f"{resp}\n\n")
         self._done_busy("Screen read complete!")
 
@@ -921,7 +921,7 @@ class MainWindow:
 
     def _scheduled_execute(self, query):
         """Called by scheduler — run query automatically."""
-        self._msg("system",f"[⏰ SCHEDULED TASK]\n")
+        self._msg("system",f"[[TIME] SCHEDULED TASK]\n")
         self._start_processing(query)
 
     # ══════════════════════════════════════════════════════════
@@ -952,7 +952,7 @@ class MainWindow:
                     self.root.after(0,self.send_btn.config,{"bg":hx})
                     self.root.after(0,self.chat.tag_config,
                         "user",{"foreground":hx})
-                    changes.append(f"Accent → {name} ({hx})")
+                    changes.append(f"Accent -> {name} ({hx})")
                     break
         if "font" in q or "text size" in q:
             cur=self.F["body"][1]
@@ -961,25 +961,25 @@ class MainWindow:
                 self.F["body"]=("Consolas",ns)
                 self.settings.ui["font_size"]=ns
                 self.root.after(0,self.chat.config,{"font":self.F["body"]})
-                changes.append(f"Font → {ns}pt")
+                changes.append(f"Font -> {ns}pt")
             elif any(w in q for w in ["smaller","decrease","-"]):
                 ns=max(cur-2,8)
                 self.F["body"]=("Consolas",ns)
                 self.settings.ui["font_size"]=ns
                 self.root.after(0,self.chat.config,{"font":self.F["body"]})
-                changes.append(f"Font → {ns}pt")
+                changes.append(f"Font -> {ns}pt")
         if "dark" in q:
             self.C["bg"]="#0a0f1a"; self.C["panel"]="#0d1526"
             changes.append("Dark mode")
         if changes:
             self.settings.save_ui()
             self._msg("ui_msg",
-                "◈ UI MODIFIED:\n"
-                +"".join(f"  ✓ {c}\n" for c in changes)
+                ">> UI MODIFIED:\n"
+                +"".join(f"  OK {c}\n" for c in changes)
                 +"Saved permanently.\n\n")
         else:
             self._msg("ui_msg",
-                "◈ Try: 'change theme to blue' | 'make font bigger'\n\n")
+                ">> Try: 'change theme to blue' | 'make font bigger'\n\n")
         self._done_busy("UI updated!")
 
     # ══════════════════════════════════════════════════════════
@@ -990,16 +990,16 @@ class MainWindow:
         self._voice_on = not self._voice_on
         if self._voice_on:
             self.voice.start_listening(self._voice_input_received)
-            self.voice_lbl.config(text="🎤 ON",fg=self.C["green"])
-            self._msg("system","◈ Voice activated — speak your commands\n\n")
+            self.voice_lbl.config(text="[MIC] ON",fg=self.C["green"])
+            self._msg("system",">> Voice activated — speak your commands\n\n")
         else:
             self.voice.stop_listening()
-            self.voice_lbl.config(text="🎤 OFF",fg=self.C["dim"])
-            self._msg("system","◈ Voice deactivated\n\n")
+            self.voice_lbl.config(text="[MIC] OFF",fg=self.C["dim"])
+            self._msg("system",">> Voice deactivated\n\n")
 
     def _voice_input_received(self, text: str):
         """Called when voice recognizes speech."""
-        self._msg("user",f"🎤 (voice): {text}\n")
+        self._msg("user",f"[MIC] (voice): {text}\n")
         if not self._busy:
             self._start_processing(text)
 
@@ -1021,7 +1021,7 @@ class MainWindow:
         win.title("PLC Controller")
         win.geometry("500x400")
         win.configure(bg=self.C["bg"])
-        tk.Label(win,text="◈ PLC SOFTWARE CONTROLLER",
+        tk.Label(win,text=">> PLC SOFTWARE CONTROLLER",
                  bg=self.C["bg"],fg=self.C["cyan"],
                  font=self.F["head"]).pack(anchor="w",padx=16,pady=12)
         sw=self.plc.detect_plc_software()
@@ -1055,7 +1055,7 @@ class MainWindow:
         win.title("Task Scheduler")
         win.geometry("650x500")
         win.configure(bg=self.C["bg"])
-        tk.Label(win,text="◈ AUTO TASK SCHEDULER",
+        tk.Label(win,text=">> AUTO TASK SCHEDULER",
                  bg=self.C["bg"],fg=self.C["cyan"],
                  font=self.F["head"]).pack(anchor="w",padx=16,pady=12)
         tk.Label(win,text="Tasks run automatically in background. Add tasks below.",
@@ -1140,7 +1140,7 @@ class MainWindow:
                        highlightbackground=self.C["cyan"],
                        highlightthickness=1)
         frame.pack(fill="both",expand=True,padx=1,pady=1)
-        tk.Label(frame,text="⬡",bg=self.C["panel"],
+        tk.Label(frame,text="[GP]",bg=self.C["panel"],
                  fg=self.C["cyan"],font=("Consolas",12)).pack(
                  side="left",padx=4)
         self._mini_inp=tk.Entry(frame,bg=self.C["input_bg"],
@@ -1153,13 +1153,13 @@ class MainWindow:
                             pady=6,padx=2)
         self._mini_inp.bind("<Return>",self._mini_send)
         self._mini_inp.focus_set()
-        tk.Button(frame,text="▶",bg=self.C["cyan"],fg=self.C["bg"],
+        tk.Button(frame,text=">",bg=self.C["cyan"],fg=self.C["bg"],
                   font=("Consolas",9,"bold"),relief="flat",width=2,
                   command=self._mini_send).pack(side="left",padx=1)
-        tk.Button(frame,text="⊞",bg=self.C["button"],fg=self.C["white"],
+        tk.Button(frame,text="[+]",bg=self.C["button"],fg=self.C["white"],
                   font=("Consolas",9),relief="flat",width=2,
                   command=self._restore_mini).pack(side="left",padx=1)
-        tk.Button(frame,text="✕",bg=self.C["error"],fg=self.C["white"],
+        tk.Button(frame,text="X",bg=self.C["error"],fg=self.C["white"],
                   font=("Consolas",9),relief="flat",width=2,
                   command=self._close_mini).pack(side="left",padx=(1,3))
         self._mini_win.protocol("WM_DELETE_WINDOW",self._restore_mini)
@@ -1205,7 +1205,7 @@ class MainWindow:
         win.geometry("740x540")
         win.configure(bg=self.C["bg"])
         self._dl_win=win
-        tk.Label(win,text="◈ BRAIN DOWNLOAD MANAGER",
+        tk.Label(win,text=">> BRAIN DOWNLOAD MANAGER",
                  bg=self.C["bg"],fg=self.C["cyan"],
                  font=self.F["head"]).pack(anchor="w",padx=16,pady=(12,2))
         tk.Label(win,text="C:\\GPProAgent\\models\\ | Downloads auto-resume",
@@ -1230,7 +1230,7 @@ class MainWindow:
             row=tk.Frame(frame,bg=self.C["panel"],pady=3)
             row.pack(fill="x",pady=2,padx=4)
             c=self.C["green"] if exists else self.C["error"]
-            s="✓ Ready" if exists else "✗ Missing"
+            s="OK Ready" if exists else "X Missing"
             tk.Label(row,text=f"[{key}]",bg=self.C["panel"],
                      fg=self.C["orange"],font=self.F["small"],
                      width=8).pack(side="left",padx=6)
@@ -1246,7 +1246,7 @@ class MainWindow:
             lbl.pack(side="left",padx=4)
             self._dl_labels[key]=lbl
             if not exists:
-                tk.Button(row,text="⬇ Download",bg=self.C["cyan"],
+                tk.Button(row,text="[v] Download",bg=self.C["cyan"],
                           fg=self.C["bg"],font=self.F["small"],
                           relief="flat",cursor="hand2",
                           command=lambda k=key,m=model,l=lbl:
@@ -1254,7 +1254,7 @@ class MainWindow:
                               args=(k,m,l),daemon=True).start()
                           ).pack(side="right",padx=6)
             else:
-                tk.Label(row,text="✓",bg=self.C["panel"],
+                tk.Label(row,text="OK",bg=self.C["panel"],
                          fg=self.C["green"],font=self.F["small"]
                          ).pack(side="right",padx=6)
         bot=tk.Frame(win,bg=self.C["bg"])
@@ -1262,7 +1262,7 @@ class MainWindow:
         self._dl_status=tk.Label(bot,text="",bg=self.C["bg"],
                                   fg=self.C["green"],font=self.F["small"])
         self._dl_status.pack(side="left",padx=8)
-        tk.Button(bot,text="⬇ Download ALL Missing",
+        tk.Button(bot,text="[v] Download ALL Missing",
                   bg=self.C["cyan"],fg=self.C["bg"],
                   font=self.F["head"],relief="flat",cursor="hand2",
                   command=lambda:threading.Thread(
@@ -1273,7 +1273,7 @@ class MainWindow:
         dest=self.settings.model_path/model["file"]
         ok=self._dl_file(model["url"],dest,label)
         if ok:
-            label.config(text="✓ Ready",fg=self.C["green"])
+            label.config(text="OK Ready",fg=self.C["green"])
             self._refresh_dots()
 
     def _dl_all(self):
@@ -1285,8 +1285,8 @@ class MainWindow:
             dest=self.settings.model_path/model["file"]
             ok=self._dl_file(model["url"],dest,lbl)
             if ok and lbl:
-                lbl.config(text="✓ Ready",fg=self.C["green"])
-        self._dl_status.config(text="✓ All done!")
+                lbl.config(text="OK Ready",fg=self.C["green"])
+        self._dl_status.config(text="OK All done!")
         self._refresh_dots()
 
     def _dl_file(self,url,dest,lbl=None):
@@ -1326,23 +1326,23 @@ class MainWindow:
         ready=sum(1 for m in MODELS.values()
                   if(self.settings.model_path/m["file"]).exists())
         self._msg("system",
-            f"◈ Models: {ready}/{len(MODELS)} ready")
+            f">> Models: {ready}/{len(MODELS)} ready")
         if ready < len(MODELS):
             self._msg("system",
-                f" | Click '⬇ Models' to download {len(MODELS)-ready} missing")
+                f" | Click '[v] Models' to download {len(MODELS)-ready} missing")
         self._msg("system","\n")
         try:
             import llama_cpp
             self._msg("system",
-                "◈ AI Engine: llama.cpp ✓ — Real AI responses active\n")
+                ">> AI Engine: llama.cpp OK — Real AI responses active\n")
         except ImportError:
             self._msg("system",
-                "◈ AI Engine: Expert knowledge mode\n"
-                "◈ For real AI: pip install llama-cpp-python --prefer-binary\n")
+                ">> AI Engine: Expert knowledge mode\n"
+                ">> For real AI: pip install llama-cpp-python --prefer-binary\n")
         self._msg("system",
-            f"◈ Memory: {self.memory.get_stats()['total']} entries loaded\n")
+            f">> Memory: {self.memory.get_stats()['total']} entries loaded\n")
         self._msg("system",
-            f"◈ Scheduler: {len(self.scheduler.get_tasks())} tasks configured\n\n")
+            f">> Scheduler: {len(self.scheduler.get_tasks())} tasks configured\n\n")
         self._refresh_dots()
         stats=self.memory.get_stats()
         self.root.after(0,self.mem_lbl.config,
@@ -1366,15 +1366,20 @@ class MainWindow:
     def _done_busy(self,msg):
         self._busy=False
         self.root.after(0,self.send_btn.config,
-            {"state":"normal","text":"▶ SEND"})
+            {"state":"normal","text":"> SEND"})
         self.root.after(0,self.cancel_btn.config,{"state":"disabled"})
         self.root.after(0,self.status_bar.config,
             {"text":msg,"fg":self.C["green"]})
 
     def _msg(self,tag,text):
         def _d():
+            # Safely encode text for Windows
+            try:
+                safe_text = text.encode('cp1252','replace').decode('cp1252')
+            except:
+                safe_text = text.encode('ascii','replace').decode('ascii')
             self.chat.config(state="normal")
-            self.chat.insert("end",text,tag)
+            self.chat.insert("end",safe_text,tag)
             self.chat.see("end")
             self.chat.config(state="disabled")
         self.root.after(0,_d)
@@ -1435,7 +1440,7 @@ class MainWindow:
         self.memory.remember(query, answer, brain)
         self.dashboard.record_query(brain, dur)
         # Also show in main chat
-        self._msg("system", f"[🌐 Web] {query[:40]}\n")
+        self._msg("system", f"[[WEB] Web] {query[:40]}\n")
         self._msg("agent",  f"{answer[:100]}...\n\n")
         return {
             "answer":   answer,
@@ -1450,7 +1455,7 @@ class MainWindow:
         win.title("Web Interface")
         win.geometry("400x220")
         win.configure(bg=self.C["bg"])
-        tk.Label(win, text="◈ WEB INTERFACE",
+        tk.Label(win, text=">> WEB INTERFACE",
                 bg=self.C["bg"], fg=self.C["cyan"],
                 font=self.F["head"]).pack(pady=(16,8))
         tk.Label(win, text="Access GP PRO AGENT from any browser\nor phone on same WiFi:",
@@ -1470,7 +1475,7 @@ class MainWindow:
                  font=self.F["head"], relief="flat",
                  command=copy_url).pack(pady=12)
         self._msg("system",
-            f"◈ Web interface: {url}\n"
+            f">> Web interface: {url}\n"
             "Open in phone browser to control GP PRO AGENT remotely!\n\n")
 
     # ══════════════════════════════════════════════════════════
@@ -1483,7 +1488,7 @@ class MainWindow:
         if self._llm:
             llm_cb = lambda q: self._ask("coder", q)
         result = self.codegen.generate(query, llm_cb)
-        response = (f"✓ Code Generated!\n\n"
+        response = (f"OK Code Generated!\n\n"
                    f"Language : {result['language']}\n"
                    f"File     : {result['filename']}\n"
                    f"Lines    : {result['lines']}\n"
@@ -1498,7 +1503,7 @@ class MainWindow:
         win.title("AI Code Generator")
         win.geometry("600x450")
         win.configure(bg=self.C["bg"])
-        tk.Label(win, text="◈ AI CODE GENERATOR",
+        tk.Label(win, text=">> AI CODE GENERATOR",
                 bg=self.C["bg"], fg=self.C["cyan"],
                 font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
         tk.Label(win,
@@ -1549,7 +1554,7 @@ class MainWindow:
             if query:
                 win.destroy()
                 self._quick(f"Generate code: {query}")
-        tk.Button(win, text="⚡ GENERATE CODE",
+        tk.Button(win, text="[FAST] GENERATE CODE",
                  bg=self.C["cyan"], fg=self.C["bg"],
                  font=self.F["head"], relief="flat",
                  command=generate).pack(pady=12, ipadx=20, ipady=4)
@@ -1579,7 +1584,7 @@ class MainWindow:
         win.title("Smart File Manager")
         win.geometry("550x400")
         win.configure(bg=self.C["bg"])
-        tk.Label(win, text="◈ SMART FILE MANAGER",
+        tk.Label(win, text=">> SMART FILE MANAGER",
                 bg=self.C["bg"], fg=self.C["cyan"],
                 font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
         cmds = [
@@ -1625,5 +1630,5 @@ class MainWindow:
         self._msg("error", f"{message}\n\n")
         # Flash status bar
         self.root.after(0, self.status_bar.config,
-            {"text": f"⚠ ALERT: {message[:60]}",
+            {"text": f"!! ALERT: {message[:60]}",
              "fg": self.C["error"]})

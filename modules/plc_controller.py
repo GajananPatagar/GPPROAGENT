@@ -97,16 +97,16 @@ class PLCController:
         if not software and any(w in q for w in ["open","launch","start"]):
             if "studio" in q or "rslogix" in q or "allen" in q:
                 ok = self.open_studio5000()
-                return ("✓ Opening Studio 5000..." if ok
-                        else "✗ Studio 5000 not found. Check installation.")
+                return ("OK Opening Studio 5000..." if ok
+                        else "X Studio 5000 not found. Check installation.")
             if "tia" in q or "siemens" in q:
                 ok = self.open_tia_portal()
-                return ("✓ Opening TIA Portal..." if ok
-                        else "✗ TIA Portal not found.")
+                return ("OK Opening TIA Portal..." if ok
+                        else "X TIA Portal not found.")
             if "pcwin" in q:
                 ok = self.open_pcwin()
-                return ("✓ Opening PCWin..." if ok
-                        else "✗ PCWin not found.")
+                return ("OK Opening PCWin..." if ok
+                        else "X PCWin not found.")
 
         if not software:
             return ("No PLC software detected.\n"
@@ -118,18 +118,18 @@ class PLCController:
             import pyautogui
             if "new rung" in q or "add rung" in q:
                 self.create_new_rung()
-                return f"✓ New rung added in {software}"
+                return f"OK New rung added in {software}"
             if "go online" in q:
                 if self._software == "studio5000":
                     pyautogui.hotkey("alt","w","o")
-                return f"✓ Going online in {software}"
+                return f"OK Going online in {software}"
             if "download" in q and "program" in q:
                 if self._software == "studio5000":
                     pyautogui.hotkey("alt","c","d")
-                return f"✓ Downloading program to PLC"
+                return f"OK Downloading program to PLC"
             if "save" in q:
                 pyautogui.hotkey("ctrl","s")
-                return f"✓ Saved project in {software}"
+                return f"OK Saved project in {software}"
             if "screenshot" in q or "read" in q:
                 if self.vision:
                     text = self.vision.read_screen_text()

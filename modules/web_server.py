@@ -39,12 +39,12 @@ header{background:#0d1526;border-bottom:1px solid #1a3a5c;padding:12px 16px;disp
 </head>
 <body>
 <header>
-  <span class="logo">⬡ GP PRO AGENT</span>
+  <span class="logo">[GP] GP PRO AGENT</span>
   <span class="status">● Online — Web Access</span>
   <span style="margin-left:auto;color:#3a5a7a;font-size:10px" id="ram">RAM: --</span>
 </header>
 <div id="chat">
-  <div class="msg-system">◈ GP PRO AGENT Web Interface — Connected</div>
+  <div class="msg-system">>> GP PRO AGENT Web Interface — Connected</div>
   <div class="msg-system">Ask anything or control your PC remotely</div>
 </div>
 <div id="input-area">
