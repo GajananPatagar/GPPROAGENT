@@ -97,11 +97,26 @@ class MainWindow:
         self.tag_mon   = TagMonitor(str(self.settings.brain_root), self.C, self.F)
         self.alerts    = AlertSystem(str(self.settings.brain_root), self.C, self.F, self._notify_from_alert)
         self.web       = WebServer(self._web_query_handler, port=5000)
+        self.auto_agent = AutonomousAgent(
+            str(self.settings.brain_root),
+            self._scheduled_execute,
+            self._msg_from_agent)
+        self.cv_ai      = ComputerVisionAI(str(self.settings.cache_path))
+        self.plc_hw     = PLCDirectConnection(str(self.settings.brain_root))
+        self.team       = MultiAgentTeam(
+            str(self.settings.brain_root),
+            self._ask, self._msg_from_agent)
+        self.cloud      = CloudSyncManager(
+            str(self.settings.brain_root),
+            self._msg_from_agent)
 
         self._build_ui()
         self.scheduler.start()
         self.web.start()
         self.alerts.start_monitoring()
+        self.auto_agent.start()
+        self.team.start()
+        self.cloud.start()
 
     def _setup_root(self):
         self.root = tk.Tk()
@@ -374,6 +389,8 @@ class MainWindow:
 
     def _process(self, query):
         self._msg("user",f"You: {query}\n")
+        # Record for autonomous learning
+        self.auto_agent.record_activity(query)
         self._all_dots(self.C["dim"])
         q=query.lower().strip()
 
@@ -1632,3 +1649,443 @@ class MainWindow:
         self.root.after(0, self.status_bar.config,
             {"text": f"!! ALERT: {message[:60]}",
              "fg": self.C["error"]})
+
+    # ======================================================
+    # NEW MODULE 1 - AUTONOMOUS AGENT
+    # ======================================================
+
+    def _msg_from_agent(self, text: str):
+        """Receive messages from background agents."""
+        safe = text.encode('ascii','replace').decode('ascii')
+        self._msg("action", f"{safe}\n\n")
+
+    def _auto_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Autonomous Agent")
+        win.geometry("700x550")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> AUTONOMOUS AGENT MODE",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w",
+                padx=16, pady=(12,4))
+        status = (f"Patterns: {self.auto_agent.pattern_count} | "
+                 f"Active: {self.auto_agent.enabled_count}")
+        tk.Label(win, text=status, bg=self.C["bg"],
+                fg=self.C["green"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        # Pattern list
+        pf = tk.Frame(win, bg=self.C["bg"])
+        pf.pack(fill="both", expand=True, padx=16)
+
+        def refresh():
+            for w in pf.winfo_children():
+                w.destroy()
+            for p in self.auto_agent.get_patterns():
+                row = tk.Frame(pf, bg=self.C["panel"], pady=3)
+                row.pack(fill="x", pady=2)
+                c = self.C["green"] if p.enabled else self.C["dim"]
+                tk.Label(row, text="*", bg=self.C["panel"],
+                        fg=c, font=self.F["small"]).pack(side="left",padx=6)
+                tk.Label(row, text=p.name[:35],
+                        bg=self.C["panel"], fg=self.C["white"],
+                        font=self.F["small"], width=35,
+                        anchor="w").pack(side="left")
+                tk.Label(row,
+                        text=f"Runs:{p.frequency} Conf:{p.confidence:.0%}",
+                        bg=self.C["panel"], fg=self.C["dim"],
+                        font=self.F["small"]).pack(side="left", padx=8)
+                tk.Button(row,
+                         text="Enable" if not p.enabled else "Disable",
+                         bg=self.C["cyan"] if not p.enabled else self.C["button"],
+                         fg=self.C["bg"] if not p.enabled else self.C["white"],
+                         font=self.F["small"], relief="flat",
+                         command=lambda n=p.name,e=p.enabled:
+                         [self.auto_agent.enable_pattern(n,not e),
+                          refresh()]).pack(side="right", padx=6)
+                tk.Button(row, text="Run Now",
+                         bg=self.C["button"], fg=self.C["white"],
+                         font=self.F["small"], relief="flat",
+                         command=lambda s=p.steps:
+                         [self._quick(s[0]) if s else None]
+                         ).pack(side="right", padx=2)
+        refresh()
+
+        # Add custom pattern
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+        af = tk.Frame(win, bg=self.C["bg"])
+        af.pack(fill="x", padx=16, pady=(0,8))
+        tk.Label(af, text="Add pattern:",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(side="left")
+        ne = tk.Entry(af, bg=self.C["input_bg"],
+                     fg=self.C["white"],
+                     font=self.F["small"], width=16)
+        ne.insert(0, "Pattern name")
+        ne.pack(side="left", padx=4)
+        te = tk.Entry(af, bg=self.C["input_bg"],
+                     fg=self.C["white"],
+                     font=self.F["small"], width=10)
+        te.insert(0, "09:00")
+        te.pack(side="left", padx=4)
+        ce = tk.Entry(af, bg=self.C["input_bg"],
+                     fg=self.C["white"],
+                     font=self.F["small"], width=20)
+        ce.insert(0, "Command to run")
+        ce.pack(side="left", padx=4)
+        tk.Button(af, text="Add",
+                 bg=self.C["cyan"], fg=self.C["bg"],
+                 font=self.F["small"], relief="flat",
+                 command=lambda: [
+                     self.auto_agent.add_pattern(
+                         ne.get(), [te.get()], [ce.get()]),
+                     refresh()
+                 ]).pack(side="left")
+
+    # ======================================================
+    # NEW MODULE 2 - COMPUTER VISION AI
+    # ======================================================
+
+    def _handle_cv_analysis(self, query: str):
+        self._msg("action", "[CV-AI BRAIN | Analyzing screen]\n")
+        self.root.after(0, self.status_bar.config,
+            {"text": "CV-AI scanning screen...",
+             "fg": self.C["warning"]})
+        result = self.cv_ai.analyze_screen()
+        desc   = result.get("description", "No description")
+        alarms = result.get("alarms", [])
+        sw     = result.get("software", "Unknown")
+        actions = result.get("actions", [])
+
+        response = f"CV-AI Screen Analysis:\n\n{desc}"
+        if alarms:
+            response += f"\n\n!! ALARMS DETECTED ({len(alarms)}):"
+            for a in alarms:
+                response += f"\n  [{a['severity']}] {a['text']}"
+        if actions:
+            response += f"\n\nSuggested actions:"
+            for act in actions:
+                response += f"\n  - {act}"
+
+        self._msg("agent", f"{response}\n\n")
+        self._done_busy("CV-AI analysis complete!")
+
+    # ======================================================
+    # NEW MODULE 3 - PLC HARDWARE DIRECT
+    # ======================================================
+
+    def _handle_plc_hw(self, query: str):
+        self._msg("action", "[PLC-DIRECT BRAIN | Hardware connection]\n")
+        result = self.plc_hw.execute_command(query)
+        self._msg("agent", f"{result}\n\n")
+        self._done_busy("PLC hardware command sent!")
+
+    def _plc_hw_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("PLC Direct Hardware Connection")
+        win.geometry("650x500")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> PLC DIRECT HARDWARE CONNECTION",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w",
+                padx=16, pady=(12,4))
+        active = self.plc_hw.active_count
+        tk.Label(win,
+                text=f"Connections: {self.plc_hw.connection_count} | Active: {active}",
+                bg=self.C["bg"],
+                fg=self.C["green"] if active else self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        # Connect form
+        cf = tk.Frame(win, bg=self.C["bg"])
+        cf.pack(fill="x", padx=16, pady=4)
+        tk.Label(cf, text="PLC IP:",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(side="left")
+        ip_e = tk.Entry(cf, bg=self.C["input_bg"],
+                       fg=self.C["white"],
+                       font=self.F["small"], width=14)
+        ip_e.insert(0, "192.168.1.1")
+        ip_e.pack(side="left", padx=4)
+
+        proto_v = tk.StringVar(value="modbus")
+        for p, l in [("modbus","Modbus TCP"),("s7","Siemens S7")]:
+            tk.Radiobutton(cf, text=l, variable=proto_v,
+                          value=p, bg=self.C["bg"],
+                          fg=self.C["white"],
+                          selectcolor=self.C["button"],
+                          font=self.F["small"]
+                          ).pack(side="left", padx=4)
+
+        result_lbl = tk.Label(win, text="",
+                              bg=self.C["bg"],
+                              fg=self.C["green"],
+                              font=self.F["small"],
+                              wraplength=600, justify="left")
+        result_lbl.pack(anchor="w", padx=16, pady=4)
+
+        def do_connect():
+            ip    = ip_e.get().strip()
+            proto = proto_v.get()
+            port  = 102 if proto=="s7" else 502
+            name  = f"PLC_{ip}"
+            self.plc_hw.add_connection(name, proto, ip, port)
+            ok, msg = self.plc_hw.connect(name)
+            result_lbl.config(
+                text=f"{'OK' if ok else 'FAILED'}: {msg}",
+                fg=self.C["green"] if ok else self.C["error"])
+
+        tk.Button(cf, text="Connect",
+                 bg=self.C["cyan"], fg=self.C["bg"],
+                 font=self.F["head"], relief="flat",
+                 command=do_connect).pack(side="left", padx=8)
+
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        # Quick commands
+        cmds = [
+            ("Read All Tags",     "read all plc tags"),
+            ("Read Register 0",   "read plc register 0"),
+            ("PLC Status",        "plc direct status"),
+            ("Write Test (0=1)",  "write 0 to 1"),
+        ]
+        for lbl, cmd in cmds:
+            tk.Button(win, text=lbl,
+                     bg=self.C["button"], fg=self.C["white"],
+                     font=self.F["small"], relief="flat",
+                     cursor="hand2",
+                     command=lambda c=cmd,w=win:
+                     [self._quick(c), w.destroy()]
+                     ).pack(fill="x", padx=16, pady=3)
+
+    # ======================================================
+    # NEW MODULE 4 - MULTI-AGENT TEAM
+    # ======================================================
+
+    def _handle_team_task(self, query: str):
+        self._msg("action",
+            f"[MULTI-AGENT TEAM | Coordinating {self.team.agent_count} agents]\n")
+        result = self.team.execute_team_task(query)
+        self._msg("agent", f"{result}\n\n")
+        self._done_busy("Team task complete!")
+
+    def _team_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Multi-Agent Team")
+        win.geometry("700x520")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> MULTI-AGENT TEAM",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w",
+                padx=16, pady=(12,4))
+        tk.Label(win,
+                text=f"Team: {self.team.agent_count} agents | Active: {self.team.active_count}",
+                bg=self.C["bg"], fg=self.C["green"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        # Agent status cards
+        status = self.team.get_team_status()
+        agent_colors = {
+            "engineer": self.C["cyan"],
+            "monitor":  self.C["green"],
+            "safety":   self.C["error"],
+            "analyst":  self.C["orange"],
+            "operator": self.C["purple"],
+        }
+        cards = tk.Frame(win, bg=self.C["bg"])
+        cards.pack(fill="x", padx=16, pady=4)
+        for role, info in status.items():
+            card = tk.Frame(cards, bg=self.C["panel"],
+                           highlightbackground=agent_colors.get(
+                               role, self.C["border"]),
+                           highlightthickness=1,
+                           padx=8, pady=6)
+            card.pack(side="left", padx=4, fill="x", expand=True)
+            tk.Label(card, text=info["name"],
+                    bg=self.C["panel"],
+                    fg=agent_colors.get(role, self.C["white"]),
+                    font=self.F["small"]).pack()
+            status_txt = "BUSY" if info["busy"] else "READY"
+            status_col = self.C["warning"] if info["busy"] else self.C["green"]
+            tk.Label(card, text=status_txt,
+                    bg=self.C["panel"],
+                    fg=status_col,
+                    font=self.F["small"]).pack()
+            tk.Label(card, text=f"Tasks: {info['tasks']}",
+                    bg=self.C["panel"], fg=self.C["dim"],
+                    font=self.F["small"]).pack()
+            tk.Button(card, text="Assign",
+                     bg=self.C["button"], fg=self.C["white"],
+                     font=self.F["small"], relief="flat",
+                     command=lambda r=role: self._assign_to_agent(r)
+                     ).pack(pady=(4,0))
+
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        # Team task shortcuts
+        team_tasks = [
+            ("Analyze PLC and report",
+             "team analyze PLC status and generate report"),
+            ("Safety review + engineer fix",
+             "team safety review current PLC program and fix issues"),
+            ("Monitor + alert on faults",
+             "team monitor screen continuously and alert on any fault"),
+            ("Full system check",
+             "team do complete system check and status report"),
+        ]
+        for lbl, cmd in team_tasks:
+            tk.Button(win, text=lbl,
+                     bg=self.C["button"], fg=self.C["white"],
+                     font=self.F["small"], relief="flat",
+                     cursor="hand2",
+                     command=lambda c=cmd,w=win:
+                     [self._quick(c), w.destroy()]
+                     ).pack(fill="x", padx=16, pady=3)
+
+        # Task history
+        history = self.team.task_history
+        if history:
+            tk.Frame(win, bg=self.C["border"],
+                    height=1).pack(fill="x", padx=16, pady=8)
+            tk.Label(win, text="Recent team tasks:",
+                    bg=self.C["bg"], fg=self.C["dim"],
+                    font=self.F["small"]).pack(anchor="w", padx=16)
+            for h in history[:5]:
+                tk.Label(win,
+                        text=f"  [{h['primary']}] {h['task'][:50]}",
+                        bg=self.C["bg"], fg=self.C["dim"],
+                        font=self.F["small"]).pack(anchor="w", padx=16)
+
+    def _assign_to_agent(self, role: str):
+        query = self.inp.get("1.0","end-1c").strip()
+        if not query:
+            import tkinter.simpledialog as sd
+            query = sd.askstring(
+                "Assign Task",
+                f"Task for {role} agent:")
+        if query:
+            result = self.team.assign_to_agent(role, query)
+            self._msg("action",
+                f"[{role.upper()} AGENT] {result}\n\n")
+
+    # ======================================================
+    # NEW MODULE 5 - CLOUD SYNC
+    # ======================================================
+
+    def _cloud_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Cloud Brain Sync")
+        win.geometry("550x450")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> CLOUD BRAIN SYNC",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w",
+                padx=16, pady=(12,4))
+
+        status = self.cloud.get_status()
+        enabled_txt = "ENABLED" if status["enabled"] else "DISABLED"
+        enabled_col = self.C["green"] if status["enabled"] else self.C["dim"]
+        tk.Label(win,
+                text=f"Status: {enabled_txt} | Last sync: {status['last_sync'] or 'Never'}",
+                bg=self.C["bg"], fg=enabled_col,
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Label(win,
+                text="Privacy: Only anonymized patterns sync. No personal data shared.",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        # Token setup
+        tf = tk.Frame(win, bg=self.C["bg"])
+        tf.pack(fill="x", padx=16, pady=4)
+        tk.Label(tf, text="GitHub Token:",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(side="left")
+        token_e = tk.Entry(tf, bg=self.C["input_bg"],
+                          fg=self.C["white"],
+                          font=self.F["small"],
+                          show="*", width=30)
+        token_e.pack(side="left", padx=8)
+
+        result_lbl = tk.Label(win, text="",
+                              bg=self.C["bg"],
+                              fg=self.C["green"],
+                              font=self.F["small"],
+                              wraplength=500)
+        result_lbl.pack(padx=16, pady=8)
+
+        def do_setup():
+            token = token_e.get().strip()
+            if not token:
+                result_lbl.config(
+                    text="Enter GitHub token first",
+                    fg=self.C["error"])
+                return
+            result = self.cloud.setup(token, enable=True)
+            result_lbl.config(text=result,
+                             fg=self.C["green"])
+
+        def do_sync():
+            result = self.cloud.sync_now()
+            result_lbl.config(text=result,
+                             fg=self.C["green"])
+
+        def do_disable():
+            self.cloud.disable()
+            result_lbl.config(text="Cloud sync disabled",
+                             fg=self.C["warning"])
+
+        btns = tk.Frame(win, bg=self.C["bg"])
+        btns.pack(fill="x", padx=16, pady=4)
+        tk.Button(btns, text="Enable Sync",
+                 bg=self.C["cyan"], fg=self.C["bg"],
+                 font=self.F["head"], relief="flat",
+                 command=do_setup).pack(side="left", padx=4)
+        tk.Button(btns, text="Sync Now",
+                 bg=self.C["button"], fg=self.C["white"],
+                 font=self.F["small"], relief="flat",
+                 command=do_sync).pack(side="left", padx=4)
+        tk.Button(btns, text="Disable",
+                 bg=self.C["error"], fg=self.C["white"],
+                 font=self.F["small"], relief="flat",
+                 command=do_disable).pack(side="left", padx=4)
+
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        # Privacy info
+        tk.Label(win,
+                text="What gets synced (privacy-safe):",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        safe_items = [
+            "OK - Anonymized command patterns (no personal data)",
+            "OK - Brain usage statistics (anonymous)",
+            "OK - Automation template types",
+            "X  - Never: PLC IP addresses or credentials",
+            "X  - Never: Tag values or process data",
+            "X  - Never: File contents or company data",
+        ]
+        for item in safe_items:
+            col = (self.C["green"] if item.startswith("OK")
+                  else self.C["error"])
+            tk.Label(win, text=f"  {item}",
+                    bg=self.C["bg"], fg=col,
+                    font=self.F["small"]).pack(anchor="w", padx=16)
+
+        # Get token link
+        tk.Label(win,
+                text="Get GitHub token: github.com/settings/tokens",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["small"],
+                cursor="hand2").pack(anchor="w", padx=16, pady=8)
