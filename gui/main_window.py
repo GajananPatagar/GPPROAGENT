@@ -92,9 +92,16 @@ class MainWindow:
             str(self.settings.brain_root),
             self._scheduled_execute)
         self.voice     = VoiceEngine(self._voice_input_received)
+        self.codegen   = CodeGenerator(str(self.settings.brain_root))
+        self.files     = SmartFileManager(str(self.settings.brain_root))
+        self.tag_mon   = TagMonitor(str(self.settings.brain_root), self.C, self.F)
+        self.alerts    = AlertSystem(str(self.settings.brain_root), self.C, self.F, self._notify_from_alert)
+        self.web       = WebServer(self._web_query_handler, port=5000)
 
         self._build_ui()
         self.scheduler.start()
+        self.web.start()
+        self.alerts.start_monitoring()
 
     def _setup_root(self):
         self.root = tk.Tk()
@@ -155,6 +162,11 @@ class MainWindow:
             ("🤖 PLC",     self._plc_panel,       self.C["button"]),
             ("⏰ Schedule",self._scheduler_panel, self.C["button"]),
             ("⊟ Mini",     self._enter_mini_mode, self.C["button"]),
+            ("🌐 Web",      self._show_web_info,   self.C["button"]),
+            ("📝 CodeGen",  self._codegen_panel,   self.C["button"]),
+            ("📡 Tags",     self._open_tag_monitor,self.C["button"]),
+            ("📁 Files",    self._files_panel,     self.C["button"]),
+            ("🔔 Alerts",   self._open_alerts,     self.C["button"]),
             ("⬇ Models",   self._open_dl_manager, self.C["button"]),
         ]
         for i,(txt,cmd,bg) in enumerate(btns):
@@ -1408,3 +1420,210 @@ class MainWindow:
     def run(self):
         self._upd_ram()
         self.root.mainloop()
+
+    # ══════════════════════════════════════════════════════════
+    # IMPROVEMENT 1 — WEB SERVER
+    # ══════════════════════════════════════════════════════════
+
+    def _web_query_handler(self, query: str) -> dict:
+        """Handle queries from web interface."""
+        brain = self._route(query.lower())
+        model = MODELS[brain]
+        start = time.time()
+        answer = self._ask(brain, query)
+        dur  = round(time.time()-start, 2)
+        self.memory.remember(query, answer, brain)
+        self.dashboard.record_query(brain, dur)
+        # Also show in main chat
+        self._msg("system", f"[🌐 Web] {query[:40]}\n")
+        self._msg("agent",  f"{answer[:100]}...\n\n")
+        return {
+            "answer":   answer,
+            "brain":    brain,
+            "duration": dur,
+            "accuracy": model["accuracy"],
+        }
+
+    def _show_web_info(self):
+        url = self.web.get_url()
+        win = tk.Toplevel(self.root)
+        win.title("Web Interface")
+        win.geometry("400x220")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text="◈ WEB INTERFACE",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(pady=(16,8))
+        tk.Label(win, text="Access GP PRO AGENT from any browser\nor phone on same WiFi:",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack()
+        tk.Label(win, text=url,
+                bg=self.C["bg"], fg=self.C["green"],
+                font=("Consolas",14,"bold")).pack(pady=12)
+        tk.Label(win, text="Also try: http://localhost:5000",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack()
+        def copy_url():
+            self.root.clipboard_clear()
+            self.root.clipboard_append(url)
+        tk.Button(win, text="Copy URL",
+                 bg=self.C["cyan"], fg=self.C["bg"],
+                 font=self.F["head"], relief="flat",
+                 command=copy_url).pack(pady=12)
+        self._msg("system",
+            f"◈ Web interface: {url}\n"
+            "Open in phone browser to control GP PRO AGENT remotely!\n\n")
+
+    # ══════════════════════════════════════════════════════════
+    # IMPROVEMENT 2 — CODE GENERATOR
+    # ══════════════════════════════════════════════════════════
+
+    def _handle_codegen(self, query: str):
+        self._msg("action", "[CODE GENERATOR BRAIN]\n")
+        llm_cb = None
+        if self._llm:
+            llm_cb = lambda q: self._ask("coder", q)
+        result = self.codegen.generate(query, llm_cb)
+        response = (f"✓ Code Generated!\n\n"
+                   f"Language : {result['language']}\n"
+                   f"File     : {result['filename']}\n"
+                   f"Lines    : {result['lines']}\n"
+                   f"Saved to : {result['filepath']}\n\n"
+                   f"Preview (first 30 lines):\n"
+                   + "\n".join(result['code'].split('\n')[:30]))
+        self._msg("agent", f"{response}\n\n")
+        self._done_busy("Code generated!")
+
+    def _codegen_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("AI Code Generator")
+        win.geometry("600x450")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text="◈ AI CODE GENERATOR",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
+        tk.Label(win,
+                text="Describe what code you need — I generate complete working programs.",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"], height=1).pack(
+            fill="x", padx=16, pady=8)
+        # Examples
+        examples = [
+            ("Modbus PLC Client",  "Generate Modbus TCP client to read PLC registers at 192.168.1.1"),
+            ("GUI Automation",     "Generate GUI automation script to open Notepad and type text"),
+            ("PLC Structured Text","Generate PLC structured text program for motor start stop"),
+            ("Data Logger",        "Generate data logger to log temperature every 5 seconds to CSV"),
+            ("Screen Monitor",     "Generate script to take screenshot every minute and save"),
+        ]
+        tk.Label(win, text="Quick Templates:",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        bf = tk.Frame(win, bg=self.C["bg"])
+        bf.pack(fill="x", padx=16, pady=4)
+        for lbl, cmd in examples:
+            tk.Button(bf, text=lbl,
+                     bg=self.C["button"], fg=self.C["white"],
+                     font=self.F["small"], relief="flat",
+                     command=lambda c=cmd,w=win: [
+                         self._quick(c), w.destroy()]
+                     ).pack(side="left", padx=2)
+        tk.Frame(win, bg=self.C["border"], height=1).pack(
+            fill="x", padx=16, pady=8)
+        tk.Label(win, text="Custom description:",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        desc = tk.Text(win, bg=self.C["input_bg"],
+                      fg=self.C["white"], font=self.F["body"],
+                      height=6, wrap=tk.WORD,
+                      insertbackground=self.C["cyan"],
+                      borderwidth=0, highlightthickness=1,
+                      highlightcolor=self.C["cyan"],
+                      highlightbackground=self.C["border"],
+                      padx=8, pady=8)
+        desc.pack(fill="x", padx=16, pady=4)
+        desc.insert("1.0",
+            "Example: Generate a Python script that monitors PLC via Modbus TCP, "
+            "reads temperature every second, logs to CSV, and alerts if above 80°C")
+        def generate():
+            query = desc.get("1.0","end-1c").strip()
+            if query:
+                win.destroy()
+                self._quick(f"Generate code: {query}")
+        tk.Button(win, text="⚡ GENERATE CODE",
+                 bg=self.C["cyan"], fg=self.C["bg"],
+                 font=self.F["head"], relief="flat",
+                 command=generate).pack(pady=12, ipadx=20, ipady=4)
+
+    # ══════════════════════════════════════════════════════════
+    # IMPROVEMENT 3 — PLC TAG MONITOR
+    # ══════════════════════════════════════════════════════════
+
+    def _open_tag_monitor(self):
+        self.tag_mon.open_window(self.root)
+
+    # ══════════════════════════════════════════════════════════
+    # IMPROVEMENT 4 — SMART FILE MANAGER
+    # ══════════════════════════════════════════════════════════
+
+    def _handle_file_cmd(self, query: str):
+        self._msg("action", "[FILE MANAGER BRAIN]\n")
+        llm_cb = None
+        if self._llm:
+            llm_cb = lambda q: self._ask("docs", q)
+        result = self.files.process_command(query, llm_cb)
+        self._msg("agent", f"{result}\n\n")
+        self._done_busy("File operation complete!")
+
+    def _files_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Smart File Manager")
+        win.geometry("550x400")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text="◈ SMART FILE MANAGER",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
+        cmds = [
+            ("List Desktop Files",      "List files on Desktop"),
+            ("List Downloads",          "List files in Downloads"),
+            ("Organize Downloads",      "Organize my Downloads folder by file type"),
+            ("Find Python Files",       "Find file .py on Desktop"),
+            ("Disk Space Info",         "How much disk space do I have?"),
+            ("Find Log Files",          "Find file .log"),
+        ]
+        for lbl, cmd in cmds:
+            tk.Button(win, text=lbl,
+                     bg=self.C["button"], fg=self.C["white"],
+                     font=self.F["small"], relief="flat",
+                     cursor="hand2",
+                     command=lambda c=cmd,w=win: [
+                         self._quick(c), w.destroy()]
+                     ).pack(fill="x", padx=16, pady=3)
+        tk.Frame(win, bg=self.C["border"], height=1).pack(
+            fill="x", padx=16, pady=8)
+        inp_f = tk.Frame(win, bg=self.C["bg"])
+        inp_f.pack(fill="x", padx=16)
+        e = tk.Entry(inp_f, bg=self.C["input_bg"],
+                    fg=self.C["white"], font=self.F["small"])
+        e.insert(0, "Find file report.xlsx")
+        e.pack(side="left", fill="x", expand=True, padx=(0,8))
+        tk.Button(inp_f, text="Run",
+                 bg=self.C["cyan"], fg=self.C["bg"],
+                 font=self.F["small"], relief="flat",
+                 command=lambda: [
+                     self._quick(e.get()), win.destroy()]
+                 ).pack(side="left")
+
+    # ══════════════════════════════════════════════════════════
+    # IMPROVEMENT 5 — ALERT SYSTEM
+    # ══════════════════════════════════════════════════════════
+
+    def _open_alerts(self):
+        self.alerts.open_window(self.root)
+
+    def _notify_from_alert(self, message: str):
+        """Called when alert system detects something."""
+        self._msg("error", f"{message}\n\n")
+        # Flash status bar
+        self.root.after(0, self.status_bar.config,
+            {"text": f"⚠ ALERT: {message[:60]}",
+             "fg": self.C["error"]})
