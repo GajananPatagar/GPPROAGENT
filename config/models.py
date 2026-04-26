@@ -99,6 +99,5 @@ MODELS = {
         "color":"#88ffaa"
     },
 }
-TOTAL_GB = sum(m["size_gb"] for m in MODELS.items() if True else 0 for _ in [1])
 TOTAL_GB = sum(m["size_gb"] for m in MODELS.values())
 CHAT_MODELS = {k:v for k,v in MODELS.items() if v.get("can_chat",True)}
