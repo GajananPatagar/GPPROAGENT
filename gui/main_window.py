@@ -187,7 +187,7 @@ class MainWindow:
             ("error", self.C["error"], False),
             ("ui_msg",self.C["purple"],False),
             ("action",self.C["warning"],False),
-            ("memory",self.C["cyan"]+"aa",False),
+            ("memory",self.C["cyan"],False),
         ]:
             font=("Consolas",10,"bold") if bold else self.F["body"]
             self.chat.tag_config(tag,foreground=color,font=font)
