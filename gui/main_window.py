@@ -106,9 +106,7 @@ class MainWindow:
         self.team       = MultiAgentTeam(
             str(self.settings.brain_root),
             self._ask, self._msg_from_agent)
-        self.cloud      = CloudSyncManager(
-            str(self.settings.brain_root),
-            self._msg_from_agent)
+        # cloud already init above
 
         self._build_ui()
         self.scheduler.start()
@@ -117,6 +115,9 @@ class MainWindow:
         self.auto_agent.start()
         self.team.start()
         self.cloud.start()
+        self.healer.start()
+        self.pred_maint.start_monitoring()
+        self.twin.start()
 
     def _setup_root(self):
         self.root = tk.Tk()
@@ -507,6 +508,8 @@ class MainWindow:
 
         # Save to memory
         self.memory.remember(query, answer, brain, True)
+        # Update knowledge graph
+        self.graph.learn_from_query(query, brain, [brain])
         # Update dashboard
         self.dashboard.record_query(brain, dur)
         # Speak if voice on
@@ -2089,3 +2092,577 @@ class MainWindow:
                 bg=self.C["bg"], fg=self.C["cyan"],
                 font=self.F["small"],
                 cursor="hand2").pack(anchor="w", padx=16, pady=8)
+
+    # ======================================================
+    # FEATURE 1 - SELF-HEALING SYSTEM
+    # ======================================================
+
+    def _heal_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Self-Healing System")
+        win.geometry("600x450")
+        win.configure(bg=self.C["bg"])
+        report = self.healer.get_health_report()
+        tk.Label(win, text=">> SELF-HEALING SYSTEM",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
+        health = report["health_score"]
+        color  = (self.C["green"] if health > 80
+                 else self.C["warning"] if health > 50
+                 else self.C["error"])
+        tk.Label(win,
+                text=f"System Health: {health}% | "
+                     f"Errors: {report['total_errors']} | "
+                     f"Auto-fixed: {report['fixed']} ({report['fix_rate']}%)",
+                bg=self.C["bg"], fg=color,
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        # Health bar
+        bar_f = tk.Frame(win, bg=self.C["border"], height=20)
+        bar_f.pack(fill="x", padx=16, pady=4)
+        bar_f.pack_propagate(False)
+        fill_w = int(health / 100 * (win.winfo_reqwidth() - 32))
+        tk.Frame(bar_f, bg=color, width=max(fill_w, 4)).pack(
+            side="left", fill="y")
+
+        # Recent errors
+        tk.Label(win, text="Recent Errors (auto-fixed where possible):",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16, pady=(8,4))
+        for err in report["recent_errors"][-5:]:
+            fixed_txt = "OK Fixed" if err["fixed"] else "!! Not fixed"
+            fixed_col = self.C["green"] if err["fixed"] else self.C["error"]
+            rf = tk.Frame(win, bg=self.C["panel"], pady=3)
+            rf.pack(fill="x", padx=16, pady=2)
+            tk.Label(rf, text=f"[{err['type']}]",
+                    bg=self.C["panel"], fg=self.C["orange"],
+                    font=self.F["small"], width=25,
+                    anchor="w").pack(side="left", padx=6)
+            tk.Label(rf, text=fixed_txt,
+                    bg=self.C["panel"], fg=fixed_col,
+                    font=self.F["small"]).pack(side="right", padx=6)
+
+        # Fixes applied
+        if report["fixes_applied"]:
+            tk.Label(win, text="Fixes Applied by Type:",
+                    bg=self.C["bg"], fg=self.C["dim"],
+                    font=self.F["small"]).pack(anchor="w", padx=16, pady=(8,4))
+            for err_type, count in report["fixes_applied"].items():
+                tk.Label(win, text=f"  {err_type}: {count} fix(es)",
+                        bg=self.C["bg"], fg=self.C["green"],
+                        font=self.F["small"]).pack(anchor="w", padx=16)
+
+    # ======================================================
+    # FEATURE 2 - NL PLC COMPILER
+    # ======================================================
+
+    def _handle_nl_plc(self, query: str):
+        self._msg("action", "[NL-PLC COMPILER]\n")
+        llm_cb = lambda brain, q: self._ask(brain, q)
+        q = query.lower()
+        for w in ["create plc program","write plc","generate ladder",
+                  "plc program for","program to control","nl plc"]:
+            q = q.replace(w,"").strip()
+        prog = self.nl_plc.compile(q or query, f"GP_Program_{self._qcount}")
+        path = self.nl_plc.save_program(prog)
+        # Auto-document it
+        self.auto_doc.document_plc_program(
+            prog.name, prog.st_code,
+            prog.variables, prog.description)
+
+        response = (f"PLC Program Generated!\n\n"
+                   f"Name: {prog.name}\n"
+                   f"Variables: {len(prog.variables)}\n"
+                   f"Rungs: {len(prog.rungs)}\n"
+                   f"Saved to: {path}\n\n"
+                   f"Preview (ST Code):\n"
+                   + prog.st_code[:300])
+        self._msg("agent", f"{response}\n\n")
+        self._done_busy("PLC program generated!")
+
+    def _nlplc_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("NL-PLC Compiler")
+        win.geometry("650x500")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> NATURAL LANGUAGE PLC COMPILER",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
+        tk.Label(win,
+                text="Describe your PLC program in English. AI generates IEC 61131-3 code.",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        examples = [
+            "Motor start stop with E-stop and fault protection",
+            "Count 100 parts then stop conveyor and alarm",
+            "Temperature PID control for furnace setpoint 350C",
+            "Safety circuit with dual E-stop and light curtain",
+            "5-step sequence for filling machine",
+        ]
+        tk.Label(win, text="Quick Templates:",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        for ex in examples:
+            tk.Button(win, text=ex[:55],
+                     bg=self.C["button"], fg=self.C["white"],
+                     font=self.F["small"], relief="flat", anchor="w",
+                     command=lambda e=ex,w=win:
+                     [self._quick(f"create plc program {e}"), w.destroy()]
+                     ).pack(fill="x", padx=16, pady=2)
+
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+        tk.Label(win, text="Custom description:",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        desc = tk.Text(win, bg=self.C["input_bg"],
+                      fg=self.C["white"], font=self.F["body"],
+                      height=5, wrap=tk.WORD,
+                      insertbackground=self.C["cyan"],
+                      borderwidth=0, highlightthickness=1,
+                      highlightcolor=self.C["cyan"],
+                      highlightbackground=self.C["border"],
+                      padx=8, pady=8)
+        desc.pack(fill="x", padx=16, pady=4)
+        desc.insert("1.0", "Motor with start button, stop button, "
+                   "fault input, run output and indicator lamp")
+        tk.Button(win, text=">> COMPILE PLC PROGRAM",
+                 bg=self.C["cyan"], fg=self.C["bg"],
+                 font=self.F["head"], relief="flat",
+                 command=lambda: [
+                     self._quick(f"create plc program {desc.get('1.0','end-1c').strip()}"),
+                     win.destroy()
+                 ]).pack(pady=12, ipadx=20, ipady=4)
+
+    # ======================================================
+    # FEATURE 3 - PREDICTIVE MAINTENANCE
+    # ======================================================
+
+    def _handle_maint_query(self, query: str):
+        self._msg("action", "[PREDICTIVE MAINTENANCE AI]\n")
+        health  = self.pred_maint.get_health_report()
+        sched   = self.pred_maint.get_maintenance_schedule()
+        report  = self.reporter.generate_maintenance_report(health, sched)
+        path    = self.reporter.save_as_html(report)
+
+        response = "Equipment Health Report:\n\n"
+        for eq in health:
+            h = eq.get("health_score", 100)
+            status = "OK" if h > 80 else "!!" if h > 50 else "CRITICAL"
+            response += (f"{status} {eq.get('name','?')}: "
+                        f"Health={h:.0f}% "
+                        f"Failure={eq.get('failure_prob',0):.1f}%\n")
+        if sched:
+            response += f"\nMaintenance needed ({len(sched)} items):\n"
+            for s in sched[:5]:
+                response += (f"  [{s['urgency']}] {s['equipment']}: "
+                            f"{s.get('days_until','?')} days\n")
+        response += f"\nFull report: {path}"
+        self._msg("agent", f"{response}\n\n")
+        self._done_busy("Maintenance report generated!")
+
+    def _maint_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Predictive Maintenance")
+        win.geometry("750x550")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> PREDICTIVE MAINTENANCE AI",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
+
+        health = self.pred_maint.get_health_report()
+        sched  = self.pred_maint.get_maintenance_schedule()
+
+        # Equipment cards
+        cards = tk.Frame(win, bg=self.C["bg"])
+        cards.pack(fill="x", padx=16, pady=4)
+
+        for eq in health:
+            h     = eq.get("health_score", 100)
+            color = (self.C["green"] if h > 80
+                    else self.C["warning"] if h > 50
+                    else self.C["error"])
+            card  = tk.Frame(cards, bg=self.C["panel"],
+                            highlightbackground=color,
+                            highlightthickness=1,
+                            padx=8, pady=8)
+            card.pack(side="left", padx=4, fill="x", expand=True)
+            tk.Label(card, text=eq.get("name","?"),
+                    bg=self.C["panel"], fg=color,
+                    font=self.F["small"]).pack()
+            tk.Label(card, text=f"{h:.0f}%",
+                    bg=self.C["panel"], fg=color,
+                    font=("Consolas",20,"bold")).pack()
+            days = eq.get("est_failure")
+            info = f"Fail: {days}d" if days else "Normal"
+            tk.Label(card, text=info,
+                    bg=self.C["panel"], fg=self.C["dim"],
+                    font=self.F["small"]).pack()
+
+        if sched:
+            tk.Frame(win, bg=self.C["border"],
+                    height=1).pack(fill="x", padx=16, pady=8)
+            tk.Label(win, text="Maintenance Schedule:",
+                    bg=self.C["bg"], fg=self.C["cyan"],
+                    font=self.F["head"]).pack(anchor="w", padx=16)
+            for s in sched:
+                urg_col = (self.C["error"] if s["urgency"]=="IMMEDIATE"
+                          else self.C["warning"] if s["urgency"]=="SOON"
+                          else self.C["green"])
+                rf = tk.Frame(win, bg=self.C["panel"], pady=3)
+                rf.pack(fill="x", padx=16, pady=2)
+                tk.Label(rf, text=f"[{s['urgency']}]",
+                        bg=self.C["panel"], fg=urg_col,
+                        font=self.F["small"], width=12).pack(side="left",padx=6)
+                tk.Label(rf, text=s["equipment"],
+                        bg=self.C["panel"], fg=self.C["white"],
+                        font=self.F["small"], width=20,
+                        anchor="w").pack(side="left")
+                days = f"in {s.get('days_until','?')} days" if s.get("days_until") else "ASAP"
+                tk.Label(rf, text=days,
+                        bg=self.C["panel"], fg=self.C["dim"],
+                        font=self.F["small"]).pack(side="right", padx=6)
+
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+        tk.Button(win, text="Generate Full Report",
+                 bg=self.C["cyan"], fg=self.C["bg"],
+                 font=self.F["head"], relief="flat",
+                 command=lambda: self._quick("generate maintenance report")
+                 ).pack(padx=16, pady=4, ipadx=12, ipady=4)
+
+    # ======================================================
+    # FEATURE 4 - DIGITAL TWIN
+    # ======================================================
+
+    def _handle_twin_query(self, query: str):
+        self._msg("action", "[DIGITAL TWIN SIMULATOR]\n")
+        q = query.lower()
+        if "run scenario" in q or "test" in q:
+            scenarios = {
+                "normal": "normal_start",
+                "estop": "estop_test",
+                "fault": "fault_test",
+            }
+            for key, sc_id in scenarios.items():
+                if key in q:
+                    result = self.twin.run_scenario(sc_id)
+                    status = "PASSED" if result.get("passed") else "FAILED"
+                    response = (f"Scenario: {result.get('scenario','?')}\n"
+                               f"Result: {status}\n\nSteps:\n")
+                    for step in result.get("steps",[]):
+                        if "check" in step:
+                            ok = "OK" if step.get("passed") else "FAIL"
+                            response += f"  [{ok}] {step['check']}\n"
+                        else:
+                            response += f"  Set {step.get('tag','?')} = {step.get('value','?')}\n"
+                    self._msg("agent", f"{response}\n\n")
+                    self._done_busy(f"Scenario {status}")
+                    return
+
+        # Show current state
+        status = self.twin.get_status()
+        tags   = status.get("process_tags", {})
+        response = "Digital Twin Status:\n\n"
+        response += f"PLC: {'Running' if status['plc_status']['running'] else 'Stopped'}\n"
+        response += f"Scans: {status['plc_status']['scan_count']}\n\n"
+        response += "Process Values:\n"
+        for tag, val in list(tags.items())[:8]:
+            response += f"  {tag}: {val}\n"
+        response += "\nScenarios: " + ", ".join(status.get("scenarios",[]))
+        self._msg("agent", f"{response}\n\n")
+        self._done_busy("Twin status shown!")
+
+    def _twin_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Digital Twin Simulator")
+        win.geometry("700x520")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> DIGITAL TWIN SIMULATOR",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
+        status = self.twin.get_status()
+        running = status["plc_status"]["running"]
+        tk.Label(win,
+                text=f"Simulation: {'RUNNING' if running else 'STOPPED'} | "
+                     f"Scans: {status['plc_status']['scan_count']}",
+                bg=self.C["bg"],
+                fg=self.C["green"] if running else self.C["error"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        # Tag editor
+        tag_f = tk.Frame(win, bg=self.C["bg"])
+        tag_f.pack(fill="x", padx=16, pady=4)
+        tags  = status.get("process_tags", {})
+
+        self._twin_vars = {}
+        bool_tags  = {k:v for k,v in tags.items() if isinstance(v, bool)}
+        float_tags = {k:v for k,v in tags.items() if isinstance(v, float)}
+
+        # Bool toggles
+        tk.Label(tag_f, text="Boolean Inputs:",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).grid(row=0, column=0,
+                columnspan=4, sticky="w", pady=(0,4))
+        col = 0
+        for i, (tag, val) in enumerate(list(bool_tags.items())[:6]):
+            var = tk.BooleanVar(value=val)
+            self._twin_vars[tag] = var
+            cb = tk.Checkbutton(tag_f, text=tag,
+                               variable=var,
+                               bg=self.C["bg"],
+                               fg=self.C["white"],
+                               selectcolor=self.C["button"],
+                               activebackground=self.C["bg"],
+                               font=self.F["small"],
+                               command=lambda t=tag, v=var:
+                               self.twin.set_input(t, v.get()))
+            cb.grid(row=1+i//4, column=i%4, sticky="w", padx=8)
+
+        # Scenarios
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+        tk.Label(win, text="Test Scenarios:",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16)
+        for sc_id in status.get("scenarios",[]):
+            tk.Button(win, text=f"Run: {sc_id.replace('_',' ').title()}",
+                     bg=self.C["button"], fg=self.C["white"],
+                     font=self.F["small"], relief="flat", cursor="hand2",
+                     command=lambda s=sc_id,w=win:
+                     [self._quick(f"simulate run scenario {s}"),w.destroy()]
+                     ).pack(fill="x", padx=16, pady=3)
+
+        # Live values display
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+        tk.Label(win, text="Live Process Values:",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16)
+
+        val_frame = tk.Frame(win, bg=self.C["bg"])
+        val_frame.pack(fill="x", padx=16)
+        self._twin_lbls = {}
+        for i, (tag, val) in enumerate(list(float_tags.items())[:4]):
+            rf = tk.Frame(val_frame, bg=self.C["panel"], padx=8, pady=4)
+            rf.grid(row=i//2, column=i%2, padx=4, pady=2, sticky="ew")
+            tk.Label(rf, text=tag, bg=self.C["panel"],
+                    fg=self.C["dim"], font=self.F["small"]).pack(side="left")
+            lbl = tk.Label(rf, text=f"{val:.2f}",
+                          bg=self.C["panel"], fg=self.C["cyan"],
+                          font=("Consolas",12,"bold"))
+            lbl.pack(side="right")
+            self._twin_lbls[tag] = lbl
+
+        def update_vals():
+            if not win.winfo_exists():
+                return
+            vals = self.twin.get_all_values()
+            for tag, lbl in self._twin_lbls.items():
+                v = vals.get(tag)
+                if v is not None:
+                    lbl.config(text=f"{v:.2f}" if isinstance(v,float) else str(v))
+            win.after(1000, update_vals)
+        update_vals()
+
+    # ======================================================
+    # FEATURE 5 - REPORT GENERATOR
+    # ======================================================
+
+    def _handle_report_query(self, query: str):
+        self._msg("action", "[REPORT GENERATOR]\n")
+        path = self.reporter.quick_report(
+            query, query,
+            lambda brain, q: self._ask(brain, q))
+        self._msg("agent",
+            f"Report generated!\nFile: {path}\n"
+            f"Opening in browser...\n\n")
+        self.auto_doc.open_document(path)
+        self._done_busy("Report ready!")
+
+    def _report_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Report Generator")
+        win.geometry("600x450")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> PROFESSIONAL REPORT GENERATOR",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+        reports = [
+            ("Maintenance Report",    "generate maintenance report for all equipment"),
+            ("Alarm Analysis Report", "generate alarm analysis report for last 24 hours"),
+            ("PLC Status Report",     "generate plc status report"),
+            ("Session Summary",       "generate report of this session"),
+            ("Equipment Health PDF",  "generate report equipment health pdf"),
+        ]
+        for lbl, cmd in reports:
+            tk.Button(win, text=lbl,
+                     bg=self.C["button"], fg=self.C["white"],
+                     font=self.F["small"], relief="flat", cursor="hand2",
+                     command=lambda c=cmd,w=win:
+                     [self._quick(c), w.destroy()]
+                     ).pack(fill="x", padx=16, pady=4)
+
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+        tk.Label(win, text="Custom Report:",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        e = tk.Entry(win, bg=self.C["input_bg"],
+                    fg=self.C["white"], font=self.F["input"])
+        e.insert(0, "Describe the report you need")
+        e.pack(fill="x", padx=16, pady=4)
+        tk.Button(win, text="Generate Report",
+                 bg=self.C["cyan"], fg=self.C["bg"],
+                 font=self.F["head"], relief="flat",
+                 command=lambda: [
+                     self._quick(f"generate report {e.get()}"),
+                     win.destroy()
+                 ]).pack(pady=8, ipadx=16, ipady=4)
+
+    # ======================================================
+    # FEATURE 6 - GESTURE CONTROL
+    # ======================================================
+
+    def _gesture_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Gesture Control")
+        win.geometry("550x450")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> GESTURE CONTROL",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
+        is_on = self.gesture.is_running
+        tk.Label(win,
+                text=f"Status: {'ACTIVE' if is_on else 'INACTIVE'}",
+                bg=self.C["bg"],
+                fg=self.C["green"] if is_on else self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Label(win,
+                text="Requires webcam. Install mediapipe for full gesture support.",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        result_lbl = tk.Label(win, text="",
+                              bg=self.C["bg"],
+                              fg=self.C["green"],
+                              font=self.F["small"])
+        result_lbl.pack(anchor="w", padx=16, pady=4)
+
+        def toggle():
+            if self.gesture.is_running:
+                self.gesture.stop()
+                result_lbl.config(text="Gesture control stopped",
+                                 fg=self.C["warning"])
+            else:
+                ok, msg = self.gesture.start()
+                result_lbl.config(text=msg,
+                                 fg=self.C["green"] if ok else self.C["error"])
+        tk.Button(win,
+                 text="Stop Gesture Control" if is_on else "Start Gesture Control",
+                 bg=self.C["error"] if is_on else self.C["cyan"],
+                 fg=self.C["white"] if is_on else self.C["bg"],
+                 font=self.F["head"], relief="flat",
+                 command=toggle).pack(padx=16, pady=8, ipadx=12)
+
+        # Gesture reference
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+        tk.Label(win, text="Gesture Reference:",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16)
+        for g in self.gesture.get_gesture_list()[:8]:
+            rf = tk.Frame(win, bg=self.C["panel"], pady=2)
+            rf.pack(fill="x", padx=16, pady=1)
+            tk.Label(rf, text=g["gesture"].replace("_"," ").title(),
+                    bg=self.C["panel"], fg=self.C["orange"],
+                    font=self.F["small"], width=16,
+                    anchor="w").pack(side="left", padx=6)
+            tk.Label(rf, text=g["custom"] or g["default"],
+                    bg=self.C["panel"], fg=self.C["white"],
+                    font=self.F["small"],
+                    anchor="w").pack(side="left", padx=4)
+
+    # ======================================================
+    # FEATURE 8 - AUTO DOCUMENTATION
+    # ======================================================
+
+    def _handle_autodoc(self, query: str):
+        self._msg("action", "[AUTO-DOCUMENTATION]\n")
+        q = query.lower()
+        if "session" in q:
+            history = [{"query": h.get("query",""),
+                       "brain": h.get("brain","?")}
+                      for h in self.auto_agent.get_activity_log()[:20]]
+            path = self.auto_doc.document_session(history)
+            self._msg("agent",
+                f"Session documented!\nFile: {path}\n\n")
+        else:
+            docs = self.auto_doc.list_documents()
+            response = f"Auto-Documentation System\n\nDocuments ({len(docs)}):\n"
+            for d in docs[:10]:
+                response += f"  {d['name']} ({d['size']}B) - {d['modified']}\n"
+            self._msg("agent", f"{response}\n\n")
+        self._done_busy("Documentation complete!")
+
+    def _autodoc_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Auto Documentation")
+        win.geometry("650x480")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> AUTO-DOCUMENTATION SYSTEM",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16, pady=12)
+        tk.Label(win,
+                text="Automatically generates documentation from your work.",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        actions = [
+            ("Document This Session",  "document this session"),
+            ("Document PLC Programs",  "auto document plc programs"),
+            ("Generate User Manual",   "create manual for this system"),
+        ]
+        for lbl, cmd in actions:
+            tk.Button(win, text=lbl,
+                     bg=self.C["button"], fg=self.C["white"],
+                     font=self.F["small"], relief="flat", cursor="hand2",
+                     command=lambda c=cmd,w=win:
+                     [self._quick(c), w.destroy()]
+                     ).pack(fill="x", padx=16, pady=4)
+
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+        tk.Label(win, text="Recent Documents:",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w", padx=16)
+        docs = self.auto_doc.list_documents()
+        for d in docs[:8]:
+            rf = tk.Frame(win, bg=self.C["panel"], pady=3)
+            rf.pack(fill="x", padx=16, pady=2)
+            tk.Label(rf, text=d["name"][:40],
+                    bg=self.C["panel"], fg=self.C["white"],
+                    font=self.F["small"], anchor="w",
+                    width=40).pack(side="left", padx=6)
+            tk.Label(rf, text=d["modified"],
+                    bg=self.C["panel"], fg=self.C["dim"],
+                    font=self.F["small"]).pack(side="left", padx=4)
+            tk.Button(rf, text="Open",
+                     bg=self.C["cyan"], fg=self.C["bg"],
+                     font=self.F["small"], relief="flat",
+                     command=lambda p=d["path"]:
+                     self.auto_doc.open_document(p)
+                     ).pack(side="right", padx=6)
