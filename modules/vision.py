@@ -1,8 +1,8 @@
 """
-GP PRO AGENT — Screen Vision Module
+GP PRO AGENT - Screen Vision Module
 Sees screen, reads text, finds buttons, clicks accurately.
 """
-import threading, time, os
+import threading, time, os, re
 from pathlib import Path
 
 class ScreenVision:
@@ -21,14 +21,12 @@ class ScreenVision:
             self._ocr_ready = True
             print("[VISION] OCR engine ready")
         except ImportError:
-            print("[VISION] pytesseract/PIL not installed")
+            print("[VISION] pytesseract not installed")
 
     def take_screenshot(self):
-        """Capture full screen."""
         try:
             import pyautogui
-            from PIL import Image
-            img = pyautogui.screenshot()
+            img  = pyautogui.screenshot()
             path = self.cache_path / "latest_screen.png"
             img.save(str(path))
             self._last_screenshot = img
@@ -38,7 +36,6 @@ class ScreenVision:
             return None, None
 
     def read_screen_text(self):
-        """Extract all text from current screen."""
         img, path = self.take_screenshot()
         if not img:
             return ""
@@ -53,15 +50,13 @@ class ScreenVision:
             return f"[OCR error: {e}]"
 
     def find_text_on_screen(self, search_text):
-        """Find where specific text is on screen."""
         try:
             import pytesseract
-            from PIL import Image
             img, _ = self.take_screenshot()
             if not img:
                 return None
-            data = pytesseract.image_to_data(img,
-                output_type=pytesseract.Output.DICT)
+            data = pytesseract.image_to_data(
+                img, output_type=pytesseract.Output.DICT)
             for i, word in enumerate(data["text"]):
                 if search_text.lower() in word.lower():
                     x = data["left"][i] + data["width"][i]//2
@@ -72,35 +67,30 @@ class ScreenVision:
         return None
 
     def find_and_click(self, search_text):
-        """Find text on screen and click it."""
         coords = self.find_text_on_screen(search_text)
         if coords:
             try:
                 import pyautogui
                 pyautogui.click(coords[0], coords[1])
                 return True, coords
-            except Exception as e:
+            except Exception:
                 return False, None
         return False, None
 
     def describe_screen(self):
-        """Describe what is currently on screen."""
         text = self.read_screen_text()
         if not text.strip():
             return "Screen is empty or could not read text."
         lines = [l.strip() for l in text.split("\n") if l.strip()]
-        top_lines = lines[:15]
-        return "Screen content:\n" + "\n".join(top_lines)
+        return "Screen content:\n" + "\n".join(lines[:15])
 
     def detect_open_windows(self):
-        """Detect open application windows."""
         try:
             import subprocess
             result = subprocess.run(
                 ['powershell', '-command',
                  'Get-Process | Where-Object {$_.MainWindowTitle} | Select-Object MainWindowTitle'],
-                capture_output=True, text=True, timeout=5
-            )
+                capture_output=True, text=True, timeout=5)
             lines = [l.strip() for l in result.stdout.split('\n')
                     if l.strip() and 'MainWindowTitle' not in l and '---' not in l]
             return lines[:10]
