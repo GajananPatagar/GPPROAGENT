@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict, Any, Callable, Generator, Set, Tuple
 """
 GP PRO AGENT - Computer Vision AI
 Understands screen content using AI vision.

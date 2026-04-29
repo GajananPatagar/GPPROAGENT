@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict, Any, Callable, Generator, Set, Tuple
 """
 GP PRO AGENT — PLC Tag Monitor
 Live monitoring of PLC tags with real-time dashboard.

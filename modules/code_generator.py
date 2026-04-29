@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict, Any, Callable, Generator, Set, Tuple
 """
 GP PRO AGENT — AI Code Generator
 Generate complete working programs from natural language description.

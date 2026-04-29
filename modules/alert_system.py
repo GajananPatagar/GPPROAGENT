@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict, Any, Callable, Generator, Set, Tuple
 """
 GP PRO AGENT — Smart Alert System
 Monitors screen continuously, detects events, sends alerts.

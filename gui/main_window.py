@@ -29,6 +29,7 @@ from modules.auto_documentation import AutoDocumentation
 from modules.file_manager    import SmartFileManager
 from modules.web_server      import WebServer
 from modules.self_healing    import SelfHealingSystem
+from modules.features_20     import FeatureHub
 
 SW_MAP = {
     "notepad":      ("notepad.exe",   "Notepad"),
@@ -90,7 +91,12 @@ class MainWindow:
         self.ai = OllamaEngine(notify_callback=self._msg_system)
 
         # Init all modules
+        # Feature hub - 20 extra features
         self.memory    = MemoryDB(self.settings.brain_root)
+        self.features  = FeatureHub(
+            str(self.settings.brain_root),
+            self.ai.ask,
+            self._msg_system)
         self.healer    = SelfHealingSystem(
             str(self.settings.brain_root), self._msg_system)
         self.pred_maint = PredictiveMaintenanceAI(
@@ -1464,3 +1470,66 @@ class MainWindow:
     def run(self):
         self._upd_ram()
         self.root.mainloop()
+
+    def _features_panel(self):
+        """Show 20 features panel."""
+        win = tk.Toplevel(self.root)
+        win.title("20 AI Features")
+        win.geometry("700x560")
+        win.configure(bg=self.C["bg"])
+        tk.Label(win, text=">> 20 AI-POWERED FEATURES",
+                bg=self.C["bg"], fg=self.C["cyan"],
+                font=self.F["head"]).pack(anchor="w",
+                padx=16, pady=(12,4))
+        tk.Label(win,
+                text="All features use real Ollama AI. Just type naturally!",
+                bg=self.C["bg"], fg=self.C["dim"],
+                font=self.F["small"]).pack(anchor="w", padx=16)
+        tk.Frame(win, bg=self.C["border"],
+                height=1).pack(fill="x", padx=16, pady=8)
+
+        canvas = tk.Canvas(win, bg=self.C["bg"],
+                          highlightthickness=0)
+        sb = ttk.Scrollbar(win, orient="vertical",
+                          command=canvas.yview)
+        frame = tk.Frame(canvas, bg=self.C["bg"])
+        canvas.configure(yscrollcommand=sb.set)
+        canvas.pack(side="left", fill="both",
+                   expand=True, padx=(16,0))
+        sb.pack(side="right", fill="y", padx=(0,8))
+        cw = canvas.create_window((0,0), window=frame, anchor="nw")
+        frame.bind("<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")))
+        canvas.bind("<Configure>",
+            lambda e: canvas.itemconfig(cw, width=e.width))
+
+        features = self.features.get_feature_list()
+        colors = [self.C["cyan"], self.C["green"],
+                 self.C["orange"], self.C["purple"],
+                 self.C["warning"]]
+
+        for i, feat in enumerate(features):
+            rf = tk.Frame(frame, bg=self.C["panel"], pady=5)
+            rf.pack(fill="x", pady=2)
+            c = colors[i % len(colors)]
+            tk.Label(rf, text=f"{feat['id']:02d}",
+                    bg=self.C["panel"], fg=c,
+                    font=("Consolas",11,"bold"),
+                    width=4).pack(side="left", padx=6)
+            tk.Label(rf, text=feat["name"],
+                    bg=self.C["panel"], fg=self.C["white"],
+                    font=self.F["small"],
+                    width=18, anchor="w").pack(side="left")
+            tk.Label(rf, text=f'Say: "{feat["trigger"]}"',
+                    bg=self.C["panel"], fg=self.C["dim"],
+                    font=self.F["small"],
+                    anchor="w").pack(side="left", padx=8,
+                                    fill="x", expand=True)
+            tk.Button(rf, text="Try",
+                     bg=c, fg=self.C["bg"],
+                     font=self.F["small"],
+                     relief="flat", cursor="hand2",
+                     command=lambda t=feat["trigger"],w=win:
+                     [self._quick(t), w.destroy()]
+                     ).pack(side="right", padx=6)

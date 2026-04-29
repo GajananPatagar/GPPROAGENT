@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict, Any
 """
 GP PRO AGENT - Natural Language to PLC Programming
 Describe ladder logic in plain English.

@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict, Any, Callable, Generator, Set, Tuple
 """
 GP PRO AGENT — Web Interface
 Access from phone browser: http://localhost:5000

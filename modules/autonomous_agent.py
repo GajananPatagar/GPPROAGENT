@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict, Any, Callable, Generator, Set, Tuple
 """
 GP PRO AGENT - Autonomous Agent Mode
 Watches screen 24/7, learns workflows, acts automatically.
